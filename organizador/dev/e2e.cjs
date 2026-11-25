@@ -229,7 +229,8 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await page.getByText('un día en el consultorio').click()
   await page.getByRole('button', { name: 'A tarea', exact: true }).click()
   await page.getByRole('dialog').getByText('Nueva tarea', { exact: true }).first().waitFor()
-  await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
+  await page.waitForTimeout(400)
+  await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).last().click()
   await page.getByText('Tarea creada').last().waitFor()
   ok(true, 'nota convertida en tarea')
 
