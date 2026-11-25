@@ -165,20 +165,40 @@ function usePullToRefresh() {
   const [busy, setBusy] = useState(false)
   useEffect(() => {
     let y0: number | null = null
-    const start = (e: TouchEvent) => { y0 = window.scrollY <= 0 && !useStore.getState().modal ? e.touches[0].clientY : null }
-    const move = (e: TouchEvent) => { if (y0 !== null) setPull(Math.max(0, Math.min(110, (e.touches[0].clientY - y0) * 0.55))) }
-    const end = async () => {
+    let x0 = 0
+    let current = 0
+    const start = (e: TouchEvent) => {
+      const t = e.target as HTMLElement
+      // nunca empezar sobre botones, links, campos, la barra superior, menús o ventanas
+      const blocked = t.closest('button,a,input,textarea,select,.topbar,nav,aside,[role=dialog],[role=button],[draggable]')
+      y0 = !blocked && window.scrollY <= 0 && !useStore.getState().modal ? e.touches[0].clientY : null
+      x0 = e.touches[0].clientX
+      current = 0
+    }
+    const move = (e: TouchEvent) => {
+      if (y0 === null) return
+      const dy = e.touches[0].clientY - y0
+      const dx = Math.abs(e.touches[0].clientX - x0)
+      // solo cuenta un gesto claramente vertical hacia abajo
+      if (dy < 12 || dx > dy) { if (current) { current = 0; setPull(0) } return }
+      const v = Math.min(110, (dy - 12) * 0.55)
+      if (Math.abs(v - current) >= 2) { current = v; setPull(v) }
+    }
+    const end = () => {
       if (y0 === null) return
       y0 = null
-      setPull((p) => {
-        if (p >= 70) { setBusy(true); loadAll().finally(() => setTimeout(() => setBusy(false), 350)) }
-        return 0
-      })
+      if (current >= 70) { setBusy(true); loadAll().finally(() => setTimeout(() => setBusy(false), 350)) }
+      if (current) setPull(0)
+      current = 0
     }
     window.addEventListener('touchstart', start, { passive: true })
     window.addEventListener('touchmove', move, { passive: true })
     window.addEventListener('touchend', end)
-    return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end) }
+    window.addEventListener('touchcancel', end)
+    return () => {
+      window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move)
+      window.removeEventListener('touchend', end); window.removeEventListener('touchcancel', end)
+    }
   }, [])
   return { pull, busy }
 }
@@ -241,7 +261,7 @@ export function Layout() {
       </AnimatePresence>
 
       <div className="lg:pl-[248px]">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-3 backdrop-blur-md sm:px-6 no-print" style={{ paddingTop: 'env(safe-area-inset-top)' , height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
+        <header className="topbar sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-3 backdrop-blur-md sm:px-6 no-print" style={{ paddingTop: 'env(safe-area-inset-top)' , height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
           <button className="btn btn-ghost btn-icon lg:hidden" onClick={() => setDrawer(true)} aria-label="Abrir menú"><Menu size={19} /></button>
           <button onClick={() => openModal({ type: 'search' })}
             className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 text-left text-[13px] text-faint transition-colors hover:border-line-strong sm:max-w-md">

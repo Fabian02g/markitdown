@@ -55,6 +55,9 @@
 }
 
 html, body, #root { height: 100%; }
+/* En el celular: tocar botones y menús no selecciona texto ni abre "Copiar" */
+button, a, nav, header, aside, label, .chip, .seg, [role=button] { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+button, a, [role=button] { touch-action: manipulation; }
 body {
   margin: 0;
   background:
