@@ -23,7 +23,8 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!
     await tap(p.getByRole('button', { name: 'Cerrar menú' })); await p.waitForTimeout(450)
     ok(!(await menuOpen()), `${path}: ✕ cierra el menú`)
   }
-  await tap(p.getByRole('button', { name: 'Abrir menú' })); await p.waitForTimeout(450)
+  await swipe(4, 420, 220, 425); await p.waitForTimeout(450)
+  ok(await menuOpen(), 'deslizar desde el borde izquierdo abre el menú')
   await swipe(250, 400, 60, 405); await p.waitForTimeout(450)
   ok(!(await menuOpen()), 'deslizar a la izquierda cierra el menú')
   await tap(p.getByRole('button', { name: 'Abrir menú' })); await p.waitForTimeout(450)

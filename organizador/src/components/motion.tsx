@@ -78,7 +78,8 @@ export function SwipeRow({ children, onRight, onLeft, rightLabel = 'Hecha', left
   const st = useRef<{ x: number; y: number; mode: 'none' | 'h' | 'v' }>({ x: 0, y: 0, mode: 'none' })
   const swiped = useRef(0)
   if (disabled || !coarse) return <>{children}</>
-  const start = (e: React.TouchEvent) => { st.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: 'none' } }
+  // si el dedo empieza pegado al borde izquierdo, ese gesto es para abrir el menú, no para la tarea
+  const start = (e: React.TouchEvent) => { st.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: e.touches[0].clientX <= 28 ? 'v' : 'none' } }
   const move = (e: React.TouchEvent) => {
     const dx = e.touches[0].clientX - st.current.x, dy = e.touches[0].clientY - st.current.y
     if (st.current.mode === 'none') {

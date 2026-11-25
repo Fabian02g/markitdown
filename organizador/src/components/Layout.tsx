@@ -175,6 +175,9 @@ function DrawerShell({ children }: { children: ReactNode }) {
   return <div className={clsx('fixed inset-0 z-50 lg:hidden', !present && 'pointer-events-none')}>{children}</div>
 }
 
+/** Zona del borde izquierdo (px) donde empieza el gesto para abrir el menú */
+export const EDGE = 28
+
 function usePullToRefresh() {
   const [pull, setPull] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -221,6 +224,24 @@ function usePullToRefresh() {
 export function Layout() {
   const [drawer, setDrawer] = useState(false)
   const swipe = useRef<{ x: number; y: number } | null>(null)
+
+  // deslizar desde el borde izquierdo hacia la derecha abre el menú (celular)
+  useEffect(() => {
+    let st: { x: number; y: number } | null = null
+    const start = (e: TouchEvent) => {
+      const t = e.touches[0]
+      st = t.clientX <= EDGE && window.innerWidth < 1024 && !useStore.getState().modal ? { x: t.clientX, y: t.clientY } : null
+    }
+    const end = (e: TouchEvent) => {
+      if (!st) return
+      const t = e.changedTouches[0]
+      if (t.clientX - st.x > 60 && Math.abs(t.clientY - st.y) < 70) setDrawer(true)
+      st = null
+    }
+    window.addEventListener('touchstart', start, { passive: true })
+    window.addEventListener('touchend', end, { passive: true })
+    return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchend', end) }
+  }, [])
   const loc = useLocation()
   const outlet = useOutlet()
   const navType = useNavigationType()
