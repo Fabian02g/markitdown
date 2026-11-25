@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import clsx from 'clsx'
 import { ChevronLeft, ChevronRight, CheckSquare2, Users } from 'lucide-react'
@@ -8,7 +8,8 @@ import { openModal, savePiece, saveTask, toggleTask } from '../lib/store'
 import { PIECE_STATUS } from '../lib/constants'
 import { DnD, Draggable, Droppable } from './dnd'
 import { TypeIcon } from './TypeIcon'
-import { CheckCircle, Dot } from './ui'
+import { CheckCircle, Dot, Modal } from './ui'
+import { Plus } from 'lucide-react'
 
 export const itemKey = (i: AgendaItem) => `${i.kind}:${i.id}`
 
@@ -55,7 +56,13 @@ export function MonthNav({ month, onChange, children }: { month: string; onChang
   )
 }
 
-export function MonthGrid({ month, items, onDayClick, maxPerDay = 4 }: { month: string; items: AgendaItem[]; onDayClick?: (k: string) => void; maxPerDay?: number }) {
+export function MonthGrid({ month, items, onDayClick, maxPerDay = 4, daySheet = true }: { month: string; items: AgendaItem[]; onDayClick?: (k: string) => void; maxPerDay?: number; daySheet?: boolean }) {
+  const [sheet, setSheet] = useState<string | null>(null)
+  // en el celular los días muestran puntitos: tocar un día con cosas abre su lista
+  const tapDay = (k: string, n: number) => {
+    if (daySheet && n > 0 && window.matchMedia('(max-width: 639px)').matches) setSheet(k)
+    else onDayClick?.(k)
+  }
   const days = monthMatrix(month)
   const t = todayKey()
   const byDay = new Map<string, AgendaItem[]>()
@@ -78,7 +85,7 @@ export function MonthGrid({ month, items, onDayClick, maxPerDay = 4 }: { month: 
           const out = k.slice(0, 7) !== month
           return (
             <Droppable key={k} id={`day:${k}`} className={clsx('group min-h-[74px] bg-surface p-1 sm:min-h-[108px] sm:p-1.5', out && 'bg-surface/40')}>
-              <div className="flex h-full flex-col" onClick={() => onDayClick?.(k)}>
+              <div className="flex h-full flex-col" onClick={() => tapDay(k, list.length)}>
                 <div className="mb-1 flex items-center justify-between">
                   <span className={clsx('grid h-6 w-6 place-items-center rounded-full text-[12px] tabular-nums',
                     k === t ? 'font-bold text-white' : out ? 'text-faint' : 'text-muted')} style={k === t ? { background: 'var(--accent)' } : undefined}>
@@ -101,6 +108,14 @@ export function MonthGrid({ month, items, onDayClick, maxPerDay = 4 }: { month: 
       </motion.div>
       </AnimatePresence>
       </div>
+      {sheet && (
+        <Modal onClose={() => setSheet(null)} title={fmt(sheet, "EEEE d 'de' MMMM")}>
+          <div className="space-y-1.5">
+            {(byDay.get(sheet) ?? []).map((i) => <div key={itemKey(i)} onClick={() => setSheet(null)}><WeekCard item={i} /></div>)}
+          </div>
+          {onDayClick && <button className="btn mt-3 w-full" onClick={() => { const k = sheet; setSheet(null); onDayClick(k) }}><Plus size={15} />Agregar en este día</button>}
+        </Modal>
+      )}
     </DnD>
   )
 }

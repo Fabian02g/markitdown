@@ -72,3 +72,29 @@ const again = await svc.rpc('take_due_notifications');
 ok(!(again.data ?? []).some(n => n.subs.some(s => s.endpoint.endsWith(r)) && n.kind === 'portal'), 'no se reenvían');
 const forbidden = await a.rpc('take_due_notifications');
 ok(!!forbidden.error, 'usuaria no puede invocar el envío');
+
+// ---- Seguridad (auditoría QA) ----
+const inj = await anon.rpc('schedule_item_reminders', { p_kind: 'test', p_ref: pc.id, p_user: sa.data.user.id, p_date: '2030-01-01', p_time: '10:00', p_rules: ['m:30'], p_active: true, p_title: 'x', p_body: 'x', p_url: '/' })
+ok(!!inj.error, 'anónimo NO puede programar avisos a otra usuaria')
+const inj2 = await b.rpc('schedule_item_reminders', { p_kind: 'test', p_ref: pc.id, p_user: sa.data.user.id, p_date: '2030-01-01', p_time: '10:00', p_rules: ['m:30'], p_active: true, p_title: 'x', p_body: 'x', p_url: '/' })
+ok(!!inj2.error, 'otra usuaria NO puede programar avisos ajenos')
+const js = await a.from('pieces').update({ design_url: 'javascript:alert(1)' }).eq('id', pc.id)
+ok(!!js.error, 'la base rechaza links javascript: en el diseño')
+const anonTest = await anon.rpc('send_test_push')
+ok(!!anonTest.error, 'anónimo no puede pedir notificación de prueba')
+// el mismo celular pasa de una cuenta a otra
+const ep = 'https://web.push.apple.com/test-' + r
+await a.rpc('register_push', { p_endpoint: ep, p_p256dh: 'k', p_auth: 'a', p_device: 'iPhone' })
+const rb = await b.rpc('register_push', { p_endpoint: ep, p_p256dh: 'k', p_auth: 'a', p_device: 'iPhone' })
+const { data: subsA } = await a.from('push_subscriptions').select('id').eq('endpoint', ep)
+const { data: subsB } = await b.from('push_subscriptions').select('id').eq('endpoint', ep)
+ok(!rb.error && subsA.length === 0 && subsB.length === 1, 'el celular queda asociado a la cuenta con sesión abierta')
+const badEp = await a.rpc('register_push', { p_endpoint: 'http://evil', p_p256dh: 'k', p_auth: 'a', p_device: 'x' })
+ok(!!badEp.error, 'rechaza endpoints de push inválidos')
+// límite de envíos del portal
+let limited = false
+for (let i = 0; i < 32; i++) {
+  const res = await anon.rpc('portal_feedback', { p_token: psico.portal_token, p_piece: pc.id, p_kind: 'comentario', p_body: 'spam ' + i, p_name: 'x' })
+  if (res.error) { limited = /Demasiados/.test(res.error.message); break }
+}
+ok(limited, 'el portal limita envíos masivos')

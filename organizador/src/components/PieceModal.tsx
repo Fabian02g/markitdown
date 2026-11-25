@@ -3,9 +3,9 @@ import clsx from 'clsx'
 import { useShallow } from 'zustand/react/shallow'
 import { CheckCircle2, ExternalLink, ImagePlus, MessageSquare, Send, Trash2, X } from 'lucide-react'
 import { APPROVAL, CHANNELS, PIECE_STATUS, PIECE_STATUS_ORDER, PIECE_TYPE, PILLARS } from '../lib/constants'
-import { hm, fmt } from '../lib/dates'
+import { hm, fmt, localDay } from '../lib/dates'
 import { useClients } from '../lib/selectors'
-import { addComment, closeModal, deletePiece, removeCover, resolveComment, savePiece, toast, uploadCover, useStore } from '../lib/store'
+import { addComment, closeModal, deletePiece, normalizeUrl, removeCover, resolveComment, savePiece, toast, uploadCover, useStore } from '../lib/store'
 import { coverUrl } from '../lib/supabase'
 import type { Approval, Piece, PieceStatus, PieceType } from '../lib/types'
 import { ReminderRules } from './ReminderRules'
@@ -31,10 +31,20 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
     ...preset,
   })
   const [uploading, setUploading] = useState(false)
+  const saved = useRef(false)
+  const uploaded = useRef<string[]>([])
+  const initial = useRef<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [reply, setReply] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const up = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
+
+  if (initial.current === null) initial.current = JSON.stringify(d)
+  const requestClose = () => {
+    if (!saved.current && JSON.stringify(d) !== initial.current && !window.confirm('Tenés cambios sin guardar en esta pieza. ¿Descartarlos?')) return
+    if (!saved.current) uploaded.current.forEach((x) => removeCover(x)) // imágenes subidas que no se llegaron a guardar
+    closeModal()
+  }
 
   if (id && !existing) return null
   if (!clients.length) {
@@ -45,18 +55,26 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
     e?.preventDefault()
     if (!d.title.trim()) return toast('Poné un título o tema')
     if (!d.space_id) return toast('Elegí el cliente')
+    const design = normalizeUrl(d.design_url), video = normalizeUrl(d.video_url)
+    if (design === null) return toast('El link al diseño no es válido (tiene que empezar con https://)', { tone: 'error' })
+    if (video === null) return toast('El link del video no es válido', { tone: 'error' })
     setSaving(true)
-    const payload: Partial<Piece> = { ...d, title: d.title.trim(), publish_time: d.publish_date && d.publish_time ? hm(d.publish_time) : null }
+    const payload: Partial<Piece> = { ...d, design_url: design, video_url: video, title: d.title.trim(), publish_time: d.publish_date && d.publish_time ? hm(d.publish_time) : null }
     const r = await savePiece(existing ? { ...payload, id: existing.id } : payload)
     setSaving(false)
-    if (r) { closeModal(); toast(existing ? 'Pieza actualizada' : 'Pieza creada', { tone: 'ok' }) }
+    if (r) {
+      // imágenes que se quitaron de una pieza existente: borrarlas del almacenamiento
+      existing?.images.filter((x) => !d.images.includes(x)).forEach((x) => removeCover(x))
+      saved.current = true
+      closeModal(); toast(existing ? 'Pieza actualizada' : 'Pieza creada', { tone: 'ok' })
+    }
   }
 
   const onFiles = async (files: FileList | null) => {
     if (!files?.length) return
     setUploading(true)
     const paths: string[] = []
-    for (const f of Array.from(files)) { const p = await uploadCover(f); if (p) paths.push(p) }
+    for (const f of Array.from(files)) { const p = await uploadCover(f); if (p) { paths.push(p); uploaded.current.push(p) } }
     setUploading(false)
     up('images', [...d.images, ...paths])
   }
@@ -65,11 +83,11 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
 
   return (
     <Modal
-      wide onClose={closeModal}
+      wide onClose={requestClose}
       title={existing ? 'Editar pieza' : 'Nueva pieza de contenido'}
       footer={<>
-        {existing && <ConfirmButton className="btn-ghost mr-auto text-danger" onConfirm={() => { deletePiece(existing); closeModal() }}><Trash2 size={15} />Eliminar</ConfirmButton>}
-        <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
+        {existing && <ConfirmButton className="btn-ghost mr-auto text-danger" onConfirm={() => { saved.current = true; deletePiece(existing); closeModal() }}><Trash2 size={15} />Eliminar</ConfirmButton>}
+        <button className="btn btn-ghost" onClick={requestClose}>Cancelar</button>
         <button className="btn btn-primary" onClick={() => submit()} disabled={saving || uploading}>{saving ? 'Guardando…' : 'Guardar'}</button>
       </>}
     >
@@ -115,7 +133,7 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
                 <div key={p} className="group relative h-20 w-20 overflow-hidden rounded-xl border border-line bg-surface-2">
                   <img src={coverUrl(p)} alt="" className="h-full w-full object-cover" />
                   <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] text-white">{i + 1}</span>
-                  <button type="button" aria-label="Quitar imagen" onClick={() => { up('images', d.images.filter((x) => x !== p)); if (!existing?.images.includes(p)) removeCover(p) }}
+                  <button type="button" aria-label="Quitar imagen" onClick={() => { up('images', d.images.filter((x) => x !== p)); if (!existing?.images.includes(p)) { uploaded.current = uploaded.current.filter((x) => x !== p); removeCover(p) } }}
                     className="absolute right-1 top-1 grid h-5 w-5 place-items-center rounded-full bg-black/70 text-white opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100"><X size={12} /></button>
                 </div>
               ))}
@@ -182,7 +200,7 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
           {d.status === 'publicado' ? (
             <div className="rounded-xl border border-ok/30 bg-ok/10 p-3 text-sm">
               <div className="flex items-center gap-1.5 font-medium text-ok"><CheckCircle2 size={15} />Publicada</div>
-              {d.published_at && <p className="mt-0.5 text-xs text-muted">{fmt(d.published_at.slice(0, 10))} · {new Date(d.published_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>}
+              {d.published_at && <p className="mt-0.5 text-xs text-muted">{fmt(localDay(d.published_at))} · {new Date(d.published_at).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}</p>}
               <input className="input mt-2 h-9" placeholder="¿Dónde? (Instagram, link…)" value={d.published_where} onChange={(e) => up('published_where', e.target.value)} />
             </div>
           ) : (

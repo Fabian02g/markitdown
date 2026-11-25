@@ -27,7 +27,8 @@ export function Modal({ open = true, onClose, title, children, footer, wide }: {
   const tEnd = () => {
     if (touch.current === null) return
     touch.current = null
-    if (dragY.get() > 110) onClose(); else animate(dragY, 0, { type: 'spring', stiffness: 500, damping: 40 })
+    if (dragY.get() > 110) onClose()
+    animate(dragY, 0, { type: 'spring', stiffness: 500, damping: 40 }) // si el cierre se canceló, vuelve a su lugar
   }
   return (
     <div className={clsx('fixed inset-0 z-50 flex items-end sm:items-center justify-center', !present && 'pointer-events-none')}>

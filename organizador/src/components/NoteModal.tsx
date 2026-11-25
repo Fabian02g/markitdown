@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import clsx from 'clsx'
 import { ListTodo, Pin, Plus, Trash2, X, Clapperboard } from 'lucide-react'
 import { NOTE_CATEGORIES } from '../lib/constants'
@@ -13,6 +13,8 @@ export function NoteModal({ id, preset }: { id?: string; preset?: Partial<Note> 
   const [d, setD] = useState<Partial<Note>>(() => existing ? { ...existing } : { title: '', body: '', category: 'Idea', checklist: [], pinned: false, space_id: null, ...preset })
   const [item, setItem] = useState('')
   const up = <K extends keyof Note>(k: K, v: Note[K]) => setD((x) => ({ ...x, [k]: v }))
+  const initial = useRef<string | null>(null)
+  if (initial.current === null) initial.current = JSON.stringify(d)
   if (id && !existing) return null
   const list = d.checklist ?? []
 
@@ -20,6 +22,11 @@ export function NoteModal({ id, preset }: { id?: string; preset?: Partial<Note> 
     if (!d.title?.trim() && !d.body?.trim() && !list.length) { closeModal(); return null }
     const r = await saveNote(existing ? { ...d, id: existing.id } : d)
     return r
+  }
+  // las notas se guardan solas al cerrar (tocar afuera, ✕ o deslizar)
+  const closeAndSave = async () => {
+    if (JSON.stringify(d) !== initial.current) { const r = await save(); if (r) toast('Nota guardada', { tone: 'ok' }) }
+    closeModal()
   }
   const toTask = async () => {
     const r = await save()
@@ -41,7 +48,7 @@ export function NoteModal({ id, preset }: { id?: string; preset?: Partial<Note> 
 
   return (
     <Modal
-      onClose={closeModal} title={existing ? 'Nota' : 'Nueva nota'}
+      onClose={closeAndSave} title={existing ? 'Nota' : 'Nueva nota'}
       footer={<>
         {existing && <ConfirmButton className="btn-ghost mr-auto text-danger" onConfirm={() => { deleteNote(existing); closeModal() }}><Trash2 size={15} /></ConfirmButton>}
         <button className="btn btn-ghost btn-sm" onClick={toPiece}><Clapperboard size={14} />A contenido</button>

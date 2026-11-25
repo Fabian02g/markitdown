@@ -11,7 +11,7 @@
   --border-strong: #363644;
   --text: #ededf2;
   --muted: #8e8e9e;
-  --faint: #5c5c6b;
+  --faint: #75758a;
   --accent: #8b5cf6;
   --accent-2: #a78bfa;
   --accent-ink: #ffffff;
@@ -30,7 +30,7 @@
   --border-strong: #cfcfdc;
   --text: #17171f;
   --muted: #61616f;
-  --faint: #9a9aa8;
+  --faint: #80808f;
   --accent-ink: #ffffff;
   --shadow: 0 10px 30px -14px rgb(30 20 60 / .25);
   color-scheme: light;

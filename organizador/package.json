@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:smoke": "node dev/smoke.mjs",
+    "test:e2e": "node dev/e2e.cjs",
+    "test:touch": "node dev/touch-test.cjs",
+    "test": "node dev/smoke.mjs && node dev/e2e.cjs && node dev/touch-test.cjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -7,7 +7,7 @@ import { ColorPicker, Dot, Field, PageHead, TagInput } from '../components/ui'
 import { SPACE_KIND } from '../lib/constants'
 import { exportJSON, exportPiecesCSV, exportTasksCSV } from '../lib/export'
 import { importOldPanel } from '../lib/importer'
-import { currentSubscription, disablePush, enablePush, isIOS, isStandalone, pushSupported, syncPush } from '../lib/push'
+import { currentSubscription, disablePush, enablePush, forgetDevice, isIOS, isStandalone, pushSupported, syncPush } from '../lib/push'
 import { saveProfile, saveSpace, toast, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import type { Space } from '../lib/types'
@@ -177,7 +177,7 @@ export default function Config() {
             <input type="password" className="input h-9 max-w-[220px]" placeholder="Nueva contraseña" value={pwd} onChange={(e) => setPwd(e.target.value)} minLength={6} />
             <button className="btn btn-sm h-9" disabled={pwd.length < 6} onClick={async () => { const { error } = await supabase.auth.updateUser({ password: pwd }); toast(error ? error.message : 'Contraseña actualizada', { tone: error ? 'error' : 'ok' }); if (!error) setPwd('') }}>Cambiar contraseña</button>
           </div>
-          <button className="btn btn-sm mt-4" onClick={() => supabase.auth.signOut()}><LogOut size={14} />Cerrar sesión</button>
+          <button className="btn btn-sm mt-4" onClick={async () => { await forgetDevice(); await supabase.auth.signOut() }}><LogOut size={14} />Cerrar sesión</button>
         </Section>
       </div>
       {editing && <SpaceEditor space={editing === 'new' ? undefined : editing} kind={editing === 'new' ? 'cliente' : undefined} onClose={() => setEditing(null)} />}

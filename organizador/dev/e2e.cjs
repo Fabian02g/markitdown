@@ -219,7 +219,9 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   const hasScroll = await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)
   ok(!hasScroll, 'móvil sin scroll horizontal')
   // aparece en la compu en vivo, sin recargar
-  ok(await page.getByText('Comprar regalo cumple Romi').waitFor({ timeout: 8000 }).then(() => true, () => false), 'sincronización en vivo: lo creado en el celular aparece en la compu sin recargar')
+  const synced = await page.getByText('Comprar regalo cumple Romi').first().waitFor({ timeout: 8000 }).then(() => true, () => false)
+  if (!synced) { await page.screenshot({ path: `${OUT}/sync-fallo.png`, fullPage: true }); console.log('debug url', page.url(), 'dialogs', await page.getByRole('dialog').count(), 'filas', await page.locator('div[role=button]').count()) }
+  ok(synced, 'sincronización en vivo: lo creado en el celular aparece en la compu sin recargar')
 
   // ---- Notas → tarea ----
   await page.goto(BASE + '/notas')

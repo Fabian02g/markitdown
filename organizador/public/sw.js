@@ -1,5 +1,6 @@
 /* Service worker: notificaciones push + funcionamiento como app instalada */
-const CACHE = 'mipanel-v1'
+const CACHE = 'mipanel-v2'
+const MAX_ASSETS = 60
 const SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (e) => {
@@ -19,9 +20,18 @@ self.addEventListener('fetch', (e) => {
     return
   }
   if (url.pathname.startsWith('/assets/')) {
-    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => { const c = r.clone(); caches.open(CACHE).then((x) => x.put(req, c)); return r })))
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => {
+      if (r.ok) { const c = r.clone(); caches.open(CACHE).then((x) => x.put(req, c).then(() => trim(x))) }
+      return r
+    })))
   }
 })
+
+// Mantener la caché acotada: borrar los archivos más viejos de versiones anteriores
+async function trim(cache) {
+  const keys = (await cache.keys()).filter((k) => new URL(k.url).pathname.startsWith('/assets/'))
+  if (keys.length > MAX_ASSETS) await Promise.all(keys.slice(0, keys.length - MAX_ASSETS).map((k) => cache.delete(k)))
+}
 
 self.addEventListener('push', (e) => {
   let d = {}
@@ -39,7 +49,10 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close()
-  const url = new URL((e.notification.data && e.notification.data.url) || '/', location.origin).href
+  // solo pantallas de la propia app (nunca links externos)
+  let target = new URL((e.notification.data && e.notification.data.url) || '/', location.origin)
+  if (target.origin !== location.origin) target = new URL('/', location.origin)
+  const url = target.href
   e.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     for (const c of all) {

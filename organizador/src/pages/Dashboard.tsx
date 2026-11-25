@@ -4,13 +4,14 @@ import { CountUp, celebrate, rise, stagger } from '../components/motion'
 import { Link, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock, Megaphone, Pencil, Plus, Star, Target } from 'lucide-react'
-import { addDaysKey, fmt, fmtMinutes, greeting, monthMatrix, todayKey, weekDays, WEEKDAYS_SHORT, cap } from '../lib/dates'
+import { addDaysKey, fmt, fmtMinutes, greeting, localDay, monthMatrix, todayKey, weekDays, WEEKDAYS_SHORT, cap } from '../lib/dates'
 import { byDue, isTaskOverdue, spaceStats, useAgenda, useSpaces, type AgendaItem } from '../lib/selectors'
 import { openModal, saveProfile, useStore } from '../lib/store'
 import { PHRASES, PIECE_TYPE } from '../lib/constants'
 import { TaskRow } from '../components/TaskRow'
 import { WeekCard, itemKey } from '../components/Calendar'
 import { Dot, Empty, Progress } from '../components/ui'
+import { SetupCard } from '../components/SetupCard'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -71,15 +72,15 @@ export default function Dashboard() {
     const todayTasks = tasks.filter((t) => t.due_date === T)
     const pending = todayTasks.filter((t) => t.status !== 'done')
     const overdue = tasks.filter((t) => isTaskOverdue(t))
-    const doneToday = tasks.filter((t) => t.status === 'done' && t.completed_at && t.completed_at.slice(0, 10) === T)
+    const doneToday = tasks.filter((t) => t.status === 'done' && t.completed_at && localDay(t.completed_at) === T)
     const pubsToday = pieces.filter((p) => p.publish_date === T)
     const pubsWeek = pieces.filter((p) => p.publish_date && p.publish_date >= wk[0] && p.publish_date <= wk[6] && p.status !== 'publicado')
     const minutes = pending.reduce((a, t) => a + (t.estimate_min || 0), 0)
     const open = tasks.filter((t) => t.status !== 'done')
     const top = [...open.filter((t) => t.is_top), ...open.filter((t) => !t.is_top && (t.due_date ?? '9999') <= T).sort(byDue)]
       .filter((t, i, a) => a.findIndex((x) => x.id === t.id) === i).slice(0, 3)
-    const doneWeek = tasks.filter((t) => t.status === 'done' && t.completed_at && t.completed_at.slice(0, 10) >= wk[0] && t.completed_at.slice(0, 10) <= wk[6]).length
-      + pieces.filter((p) => p.status === 'publicado' && p.published_at && p.published_at.slice(0, 10) >= wk[0] && p.published_at.slice(0, 10) <= wk[6]).length
+    const doneWeek = tasks.filter((t) => t.status === 'done' && t.completed_at && localDay(t.completed_at) >= wk[0] && localDay(t.completed_at) <= wk[6]).length
+      + pieces.filter((p) => p.status === 'publicado' && p.published_at && localDay(p.published_at) >= wk[0] && localDay(p.published_at) <= wk[6]).length
     return { pending, overdue, doneToday, pubsToday, pubsWeek, minutes, top, doneWeek }
   }, [tasks, pieces, T, wk])
 
@@ -130,6 +131,8 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      <SetupCard />
 
       {/* Resumen */}
       <motion.section variants={stagger} initial="hidden" animate="show" className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-6">

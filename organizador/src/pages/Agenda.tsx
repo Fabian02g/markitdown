@@ -31,10 +31,10 @@ export default function Agenda() {
       <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
         <section className="card card-pad">
           <MonthNav month={month} onChange={setMonth} />
-          <MonthGrid month={month} items={items} onDayClick={(k) => setDay(k)} />
+          <MonthGrid month={month} items={items} daySheet={false} onDayClick={(k) => { setDay(k); if (matchMedia('(max-width: 1279px)').matches) setTimeout(() => document.getElementById('dia-detalle')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50) }} />
           <p className="mt-3 text-xs text-faint">Tocá un día para ver el detalle. Arrastrá para mover de día.</p>
         </section>
-        <section className="card card-pad">
+        <section id="dia-detalle" className="card card-pad scroll-mt-20">
           <DayList date={day} items={items} onPrev={() => setDay(addDaysKey(day, -1))} onNext={() => setDay(addDaysKey(day, 1))} />
           <div className="mt-4 flex gap-2">
             <button className="btn btn-sm flex-1" onClick={() => openModal({ type: 'task', preset: { due_date: day } })}><Plus size={14} />Tarea</button>

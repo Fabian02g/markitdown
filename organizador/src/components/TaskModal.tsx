@@ -29,13 +29,22 @@ export function TaskModal({ id, preset }: { id?: string; preset?: Partial<Task> 
   const [pending, setPending] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const initial = useRef<string | null>(null)
+  const saved = useRef(false)
   const up = <K extends keyof Draft>(k: K, v: Draft[K]) => setD((x) => ({ ...x, [k]: v }))
 
   const space = spaces.find((s) => s.id === d.space_id)
   const categories = useMemo(() => [...new Set([...(space?.categories ?? []), ...(profile?.categories ?? [])])], [space, profile])
 
+  if (initial.current === null) initial.current = JSON.stringify(d)
+  const requestClose = () => {
+    if (!saved.current && (JSON.stringify(d) !== initial.current || pending.length) && !window.confirm('Tenés cambios sin guardar en esta tarea. ¿Descartarlos?')) return
+    closeModal()
+  }
+
   if (id && !existing) return null
 
+  const savedRef = () => { saved.current = true }
   const submit = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (!d.title.trim()) return toast('Poné un nombre a la tarea')
@@ -48,7 +57,7 @@ export function TaskModal({ id, preset }: { id?: string; preset?: Partial<Task> 
     const saved = await saveTask(existing ? { ...payload, id: existing.id } : payload)
     if (saved) for (const f of pending) await uploadAttachment(f, { task_id: saved.id })
     setSaving(false)
-    if (saved) { closeModal(); toast(existing ? 'Tarea actualizada' : 'Tarea creada', { tone: 'ok' }) }
+    if (saved) { savedRef(); closeModal(); toast(existing ? 'Tarea actualizada' : 'Tarea creada', { tone: 'ok' }) }
   }
 
   const addSub = () => {
@@ -61,11 +70,11 @@ export function TaskModal({ id, preset }: { id?: string; preset?: Partial<Task> 
 
   return (
     <Modal
-      onClose={closeModal}
+      onClose={requestClose}
       title={existing ? 'Editar tarea' : 'Nueva tarea'}
       footer={<>
-        {existing && <ConfirmButton className="btn-ghost mr-auto text-danger" onConfirm={() => { deleteTask(existing); closeModal() }}><Trash2 size={15} />Eliminar</ConfirmButton>}
-        <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
+        {existing && <ConfirmButton className="btn-ghost mr-auto text-danger" onConfirm={() => { saved.current = true; deleteTask(existing); closeModal() }}><Trash2 size={15} />Eliminar</ConfirmButton>}
+        <button className="btn btn-ghost" onClick={requestClose}>Cancelar</button>
         <button className="btn btn-primary" onClick={() => submit()} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
       </>}
     >
