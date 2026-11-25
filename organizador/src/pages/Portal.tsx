@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import clsx from 'clsx'
 import { AnimatePresence, motion } from 'motion/react'
@@ -126,6 +126,7 @@ function PieceSheet({ token, piece, onClose, onDone }: { token: string; piece: P
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const [img, setImg] = useState(0)
+  const tx = useRef<number | null>(null)
   const vid = driveId(piece.video_url || '')
   useEffect(() => {
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -156,8 +157,12 @@ function PieceSheet({ token, piece, onClose, onDone }: { token: string; piece: P
                 <motion.img key={img} src={coverUrl(piece.images[img])} alt={piece.title}
                   className={clsx('mx-auto max-h-[60dvh] w-full touch-pan-y object-contain', piece.type === 'historia' && 'max-h-[70dvh]')}
                   initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }}
-                  drag={piece.images.length > 1 ? 'x' : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
-                  onDragEnd={(_, i) => { if (i.offset.x < -50 && img < piece.images.length - 1) setImg(img + 1); else if (i.offset.x > 50 && img > 0) setImg(img - 1) }} />
+                  onTouchStart={(e) => { tx.current = e.touches[0].clientX }}
+                  onTouchEnd={(e) => {
+                    if (tx.current === null) return
+                    const dx = e.changedTouches[0].clientX - tx.current; tx.current = null
+                    if (dx < -45 && img < piece.images.length - 1) setImg(img + 1); else if (dx > 45 && img > 0) setImg(img - 1)
+                  }} />
               </AnimatePresence>
               {piece.images.length > 1 && <>
                 <button className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white disabled:opacity-30" disabled={img === 0} onClick={() => setImg(img - 1)} aria-label="Anterior"><ChevronLeft size={16} /></button>

@@ -207,8 +207,11 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   const row = m.locator('div[role=button]:has-text("Comprar regalo cumple Romi")').first()
   await row.waitFor()
   const rb = await row.boundingBox()
-  await m.mouse.move(rb.x + rb.width - 30, rb.y + rb.height / 2); await m.mouse.down()
-  await m.mouse.move(rb.x + rb.width - 200, rb.y + rb.height / 2, { steps: 12 }); await m.mouse.up()
+  const mcdp = await ctx2.newCDPSession(m)
+  const ty = rb.y + rb.height / 2
+  await mcdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: rb.x + rb.width - 30, y: ty }] })
+  for (let i = 1; i <= 10; i++) await mcdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: rb.x + rb.width - 30 - i * 20, y: ty + 2 }] })
+  await mcdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   ok(await m.getByText('Pasada para mañana').waitFor({ timeout: 5000 }).then(() => true, () => false), 'deslizar ← pasa la tarea para mañana')
   await m.waitForTimeout(500)
   ok(await m.getByRole('dialog').count() === 0, 'deslizar no abre la ventana de edición')

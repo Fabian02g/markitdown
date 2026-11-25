@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { animate, motion, useMotionValue, useReducedMotion, useTransform, type PanInfo } from 'motion/react'
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'motion/react'
 import { CalendarArrowUp, Check } from 'lucide-react'
 
 /** Curvas y tiempos compartidos: rápidos y suaves */
@@ -66,7 +66,8 @@ export function ConfettiLayer() {
   )
 }
 
-/** Fila deslizable en el celular: → completa, ← pasa para mañana */
+/** Fila deslizable en el celular: → completa, ← pasa para mañana.
+ *  Gesto hecho con toques simples (sin "drag") para no interferir con los toques en iPhone. */
 export function SwipeRow({ children, onRight, onLeft, rightLabel = 'Hecha', leftLabel = 'Mañana', disabled }: {
   children: ReactNode; onRight: () => void; onLeft?: () => void; rightLabel?: string; leftLabel?: string; disabled?: boolean
 }) {
@@ -74,12 +75,26 @@ export function SwipeRow({ children, onRight, onLeft, rightLabel = 'Hecha', left
   const rightOpacity = useTransform(x, [12, 80], [0, 1])
   const leftOpacity = useTransform(x, [-12, -80], [0, 1])
   const [coarse] = useState(() => typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches)
-  const dragged = useRef(0)
+  const st = useRef<{ x: number; y: number; mode: 'none' | 'h' | 'v' }>({ x: 0, y: 0, mode: 'none' })
+  const swiped = useRef(0)
   if (disabled || !coarse) return <>{children}</>
-  const end = (_: unknown, info: PanInfo) => {
-    dragged.current = Date.now()
-    if (info.offset.x > 90) { haptic(); onRight() }
-    else if (info.offset.x < -90 && onLeft) { haptic(); onLeft() }
+  const start = (e: React.TouchEvent) => { st.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, mode: 'none' } }
+  const move = (e: React.TouchEvent) => {
+    const dx = e.touches[0].clientX - st.current.x, dy = e.touches[0].clientY - st.current.y
+    if (st.current.mode === 'none') {
+      if (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.4) st.current.mode = 'h'
+      else if (Math.abs(dy) > 10) st.current.mode = 'v'
+    }
+    if (st.current.mode === 'h') x.set(Math.max(onLeft ? -140 : -20, Math.min(140, dx * 0.75)))
+  }
+  const end = () => {
+    if (st.current.mode === 'h') {
+      swiped.current = Date.now()
+      const v = x.get()
+      if (v > 80) { haptic(); onRight() } else if (v < -80 && onLeft) { haptic(); onLeft() }
+    }
+    st.current.mode = 'none'
+    animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 })
   }
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -91,10 +106,9 @@ export function SwipeRow({ children, onRight, onLeft, rightLabel = 'Hecha', left
           {leftLabel}<CalendarArrowUp size={16} />
         </motion.div>
       )}
-      <motion.div style={{ x }} drag="x" dragDirectionLock dragConstraints={{ left: 0, right: 0 }} dragElastic={{ left: onLeft ? 0.5 : 0.05, right: 0.5 }}
-        onDragStart={() => { dragged.current = Date.now() }} onDrag={() => { dragged.current = Date.now() }}
-        onDragEnd={end} className="relative bg-surface"
-        onClickCapture={(e) => { if (Date.now() - dragged.current < 350) { e.stopPropagation(); e.preventDefault() } }}>
+      <motion.div style={{ x, touchAction: 'pan-y' }} className="relative bg-surface"
+        onTouchStart={start} onTouchMove={move} onTouchEnd={end} onTouchCancel={end}
+        onClickCapture={(e) => { if (Date.now() - swiped.current < 400) { e.stopPropagation(); e.preventDefault() } }}>
         {children}
       </motion.div>
     </div>

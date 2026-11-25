@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { X } from 'lucide-react'
-import { AnimatePresence, motion, useDragControls } from 'motion/react'
+import { AnimatePresence, animate, motion, useIsPresent, useMotionValue } from 'motion/react'
 import { PALETTE } from '../lib/constants'
 
 const isMobile = () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 639px)').matches
@@ -9,8 +9,10 @@ const isMobile = () => typeof matchMedia !== 'undefined' && matchMedia('(max-wid
 export function Modal({ open = true, onClose, title, children, footer, wide }: {
   open?: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean
 }) {
-  const drag = useDragControls()
   const [mobile] = useState(isMobile)
+  const present = useIsPresent()
+  const dragY = useMotionValue(0)
+  const touch = useRef<number | null>(null)
   useEffect(() => {
     if (!open) return
     const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -19,9 +21,16 @@ export function Modal({ open = true, onClose, title, children, footer, wide }: {
     return () => { window.removeEventListener('keydown', k); document.body.style.overflow = '' }
   }, [open, onClose])
   if (!open) return null
-  const startDrag = (e: React.PointerEvent) => { if (mobile) drag.start(e) }
+  // cerrar deslizando la barra superior hacia abajo (gesto simple, sin "drag")
+  const tStart = (e: React.TouchEvent) => { if (mobile) touch.current = e.touches[0].clientY }
+  const tMove = (e: React.TouchEvent) => { if (touch.current !== null) dragY.set(Math.max(0, e.touches[0].clientY - touch.current)) }
+  const tEnd = () => {
+    if (touch.current === null) return
+    touch.current = null
+    if (dragY.get() > 110) onClose(); else animate(dragY, 0, { type: 'spring', stiffness: 500, damping: 40 })
+  }
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className={clsx('fixed inset-0 z-50 flex items-end sm:items-center justify-center', !present && 'pointer-events-none')}>
       <motion.div className="absolute inset-0 bg-black/60 backdrop-blur-[3px]" onClick={onClose}
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
       <motion.div
@@ -29,21 +38,19 @@ export function Modal({ open = true, onClose, title, children, footer, wide }: {
         initial={mobile ? { y: '100%' } : { opacity: 0, scale: 0.96, y: 8 }}
         animate={mobile ? { y: 0 } : { opacity: 1, scale: 1, y: 0 }}
         exit={mobile ? { y: '100%' } : { opacity: 0, scale: 0.97, y: 6 }}
-        transition={mobile ? { type: 'spring', stiffness: 380, damping: 38 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-        drag={mobile ? 'y' : false} dragListener={false} dragControls={drag}
-        dragConstraints={{ top: 0, bottom: 0 }} dragElastic={{ top: 0, bottom: 0.7 }}
-        onDragEnd={(_, i) => { if (i.offset.y > 110 || i.velocity.y > 600) onClose() }}
+        transition={mobile ? { type: 'tween', duration: 0.26, ease: [0.22, 1, 0.36, 1] } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        style={{ translateY: dragY }}
         className={clsx(
           'modal-surface relative flex max-h-[94dvh] w-full flex-col rounded-t-3xl sm:rounded-2xl border border-line shadow-2xl',
           wide ? 'sm:max-w-3xl' : 'sm:max-w-xl',
         )}
       >
-        <div onPointerDown={startDrag} className="touch-none sm:touch-auto">
+        <div onTouchStart={tStart} onTouchMove={tMove} onTouchEnd={tEnd} onTouchCancel={tEnd}>
           <div className="mx-auto mt-2.5 h-1.5 w-11 rounded-full bg-line-strong sm:hidden" />
           {title !== undefined && (
             <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
               <div className="h2 text-base">{title}</div>
-              <button className="btn btn-ghost btn-icon -mr-2" onClick={onClose} onPointerDown={(e) => e.stopPropagation()} aria-label="Cerrar"><X size={18} /></button>
+              <button className="btn btn-ghost -mr-3 h-11 w-11 px-0" onClick={onClose} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} aria-label="Cerrar"><X size={20} /></button>
             </div>
           )}
           {title === undefined && <div className="h-2" />}

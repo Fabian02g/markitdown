@@ -10,16 +10,16 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { MotionConfig } from 'motion/react'
 import { AppSkeleton } from './components/motion'
 
-const Agenda = lazy(() => import('./pages/Agenda'))
-const Semana = lazy(() => import('./pages/Semana'))
-const Tareas = lazy(() => import('./pages/Tareas'))
-const Editorial = lazy(() => import('./pages/Editorial'))
-const HoySale = lazy(() => import('./pages/HoySale'))
-const SpacePage = lazy(() => import('./pages/SpacePage'))
-const Clientes = lazy(() => import('./pages/Clientes'))
-const Proyectos = lazy(() => import('./pages/Clientes').then((m) => ({ default: m.Proyectos })))
-const Notas = lazy(() => import('./pages/Notas'))
-const Config = lazy(() => import('./pages/Config'))
+import Agenda from './pages/Agenda'
+import Semana from './pages/Semana'
+import Tareas from './pages/Tareas'
+import Editorial from './pages/Editorial'
+import HoySale from './pages/HoySale'
+import SpacePage from './pages/SpacePage'
+import Clientes from './pages/Clientes'
+import { Proyectos } from './pages/Clientes'
+import Notas from './pages/Notas'
+import Config from './pages/Config'
 const Portal = lazy(() => import('./pages/Portal'))
 
 function Splash() {

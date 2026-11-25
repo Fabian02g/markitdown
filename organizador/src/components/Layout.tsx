@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, motion, useIsPresent } from 'motion/react'
 import { ConfettiLayer, ease } from './motion'
 import { RefreshCw } from 'lucide-react'
 import { loadAll } from '../lib/store'
@@ -160,6 +160,12 @@ function ModalSwitch() {
   return null
 }
 
+/** Mientras el menú se cierra, deja pasar los toques */
+function DrawerShell({ children }: { children: ReactNode }) {
+  const present = useIsPresent()
+  return <div className={clsx('fixed inset-0 z-50 lg:hidden', !present && 'pointer-events-none')}>{children}</div>
+}
+
 function usePullToRefresh() {
   const [pull, setPull] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -205,8 +211,10 @@ function usePullToRefresh() {
 
 export function Layout() {
   const [drawer, setDrawer] = useState(false)
+  const swipe = useRef<{ x: number; y: number } | null>(null)
   const loc = useLocation()
   const outlet = useOutlet()
+  useEffect(() => { window.scrollTo(0, 0); setDrawer(false) }, [loc.pathname])
   const { pull, busy } = usePullToRefresh()
   const accent = useStore((s) => s.profile?.accent)
 
@@ -248,21 +256,26 @@ export function Layout() {
 
       <AnimatePresence>
       {drawer && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <motion.div className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-          <motion.aside initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', stiffness: 380, damping: 40 }}
-            drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={{ left: 0.6, right: 0 }} onDragEnd={(_, i) => { if (i.offset.x < -80) setDrawer(false) }}
-            className="glass-side absolute inset-y-0 left-0 w-[84vw] max-w-[300px] border-r border-line px-2 py-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
-            <button className="btn btn-ghost btn-icon absolute right-2 top-3" onClick={() => setDrawer(false)} aria-label="Cerrar menú"><X size={18} /></button>
+        <DrawerShell key="drawer">
+          <motion.div className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} />
+          <motion.aside initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'tween', duration: 0.24, ease }}
+            onTouchStart={(e) => { swipe.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }}
+            onTouchEnd={(e) => {
+              const t = e.changedTouches[0], st = swipe.current
+              if (st && st.x - t.clientX > 70 && Math.abs(t.clientY - st.y) < 60) setDrawer(false)
+              swipe.current = null
+            }}
+            className="absolute inset-y-0 left-0 w-[84vw] max-w-[300px] select-none border-r border-line bg-surface px-2 py-4 shadow-2xl" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
+            <button className="btn btn-ghost absolute right-1 z-10 h-11 w-11 px-0" style={{ top: 'calc(0.25rem + env(safe-area-inset-top))' }} onClick={() => setDrawer(false)} aria-label="Cerrar menú"><X size={20} /></button>
             <Sidebar onNavigate={() => setDrawer(false)} />
           </motion.aside>
-        </div>
+        </DrawerShell>
       )}
       </AnimatePresence>
 
       <div className="lg:pl-[248px]">
         <header className="topbar sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-3 backdrop-blur-md sm:px-6 no-print" style={{ paddingTop: 'env(safe-area-inset-top)' , height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
-          <button className="btn btn-ghost btn-icon lg:hidden" onClick={() => setDrawer(true)} aria-label="Abrir menú"><Menu size={19} /></button>
+          <button className="btn btn-ghost -ml-1 h-11 w-11 px-0 lg:hidden" onClick={() => setDrawer(true)} aria-label="Abrir menú"><Menu size={21} /></button>
           <button onClick={() => openModal({ type: 'search' })}
             className="flex h-9 flex-1 items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 text-left text-[13px] text-faint transition-colors hover:border-line-strong sm:max-w-md">
             <Search size={15} /><span className="flex-1 truncate">Buscar…</span><kbd className="hidden rounded border border-line px-1.5 text-[10px] sm:inline">Ctrl K</kbd>
@@ -280,13 +293,10 @@ export function Layout() {
             </span>
           </div>
         )}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.main key={loc.pathname} className="mx-auto w-full max-w-[1400px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12"
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.22, ease }} onAnimationStart={() => window.scrollTo(0, 0)}>
-            {outlet}
-          </motion.main>
-        </AnimatePresence>
+        <motion.main key={loc.pathname} className="mx-auto w-full max-w-[1400px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12"
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease }}>
+          {outlet}
+        </motion.main>
       </div>
 
       <nav className="glass fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line lg:hidden pb-safe no-print">
