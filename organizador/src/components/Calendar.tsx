@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import clsx from 'clsx'
 import { ChevronLeft, ChevronRight, CheckSquare2, Users } from 'lucide-react'
 import { WEEKDAYS_SHORT, monthLabel, monthMatrix, shiftMonth, todayKey, fmt, addDaysKey } from '../lib/dates'
@@ -60,9 +61,17 @@ export function MonthGrid({ month, items, onDayClick, maxPerDay = 4 }: { month: 
   const byDay = new Map<string, AgendaItem[]>()
   for (const i of items) byDay.set(i.date, [...(byDay.get(i.date) ?? []), i])
   const all = new Map(items.map((i) => [itemKey(i), i]))
+  const prev = useRef(month)
+  const dir = month === prev.current ? 0 : month > prev.current ? 1 : -1
+  prev.current = month
   return (
     <DnD onDrop={(drag, drop) => moveItemTo(drag, drop.replace('day:', ''))} overlay={(id) => all.get(id) && <div className="w-40"><AgendaChip item={all.get(id)!} /></div>}>
-      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-line bg-line">
+      <div className="overflow-hidden rounded-xl">
+      <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+      <motion.div key={month} custom={dir}
+        initial={{ opacity: 0, x: dir * 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: dir * -40 }}
+        transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+        className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-line bg-line">
         {WEEKDAYS_SHORT.map((d) => <div key={d} className="bg-surface px-2 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted">{d}</div>)}
         {days.map((k) => {
           const list = byDay.get(k) ?? []
@@ -89,6 +98,8 @@ export function MonthGrid({ month, items, onDayClick, maxPerDay = 4 }: { month: 
             </Droppable>
           )
         })}
+      </motion.div>
+      </AnimatePresence>
       </div>
     </DnD>
   )

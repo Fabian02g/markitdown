@@ -1,5 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { AnimatePresence, motion } from 'motion/react'
+import { ConfettiLayer, ease } from './motion'
+import { RefreshCw } from 'lucide-react'
+import { loadAll } from '../lib/store'
 import clsx from 'clsx'
 import {
   Bell, Briefcase, CalendarDays, CalendarRange, Clapperboard, FolderKanban, Home, LayoutList, Menu, Plus, Search, Send, Settings,
@@ -18,11 +22,12 @@ import { SearchPalette } from './SearchPalette'
 function NavItem({ to, icon, children, end, onClick }: { to: string; icon: ReactNode; children: ReactNode; end?: boolean; onClick?: () => void }) {
   return (
     <NavLink to={to} end={end} onClick={onClick}
-      className={({ isActive }) => clsx('group flex h-9 items-center gap-2.5 rounded-xl px-3 text-[13.5px] font-medium transition-colors',
-        isActive ? 'bg-surface-3 text-ink' : 'text-muted hover:bg-surface-2 hover:text-ink')}>
+      className={({ isActive }) => clsx('group relative flex h-9 items-center gap-2.5 rounded-xl px-3 text-[13.5px] font-medium transition-colors',
+        isActive ? 'text-ink' : 'text-muted hover:bg-surface-2 hover:text-ink')}>
       {({ isActive }) => <>
-        <span className={clsx('grid w-[18px] place-items-center', isActive && 'text-accent-2')}>{icon}</span>
-        <span className="truncate">{children}</span>
+        {isActive && <motion.span layoutId={'nav-active-' + (onClick ? 'd' : 's')} className="nav-active absolute inset-0 rounded-xl" transition={{ type: 'spring', stiffness: 500, damping: 40 }} />}
+        <span className={clsx('relative grid w-[18px] place-items-center', isActive && 'text-accent-2')}>{icon}</span>
+        <span className="relative truncate">{children}</span>
       </>}
     </NavLink>
   )
@@ -74,7 +79,11 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       </nav>
       <div className="flex items-center gap-1.5 px-3 pt-2 text-[11px] text-faint">
-        {syncing > 0 ? <><CloudUpload size={13} />Guardando…</> : <><Cloud size={13} />Todo guardado y sincronizado</>}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span key={syncing > 0 ? 's' : 'ok'} className="flex items-center gap-1.5" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18 }}>
+            {syncing > 0 ? <><CloudUpload size={13} className="animate-pulse text-accent-2" />Guardando…</> : <><Cloud size={13} className="text-ok" />Todo guardado y sincronizado</>}
+          </motion.span>
+        </AnimatePresence>
       </div>
     </div>
   )
@@ -93,7 +102,8 @@ function Bellbox() {
       </button>
       {open && <>
         <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-        <div className="absolute right-0 top-11 z-40 w-[min(92vw,360px)] rounded-2xl border border-line bg-surface p-2 shadow-2xl pop-in">
+        <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.18, ease }} style={{ transformOrigin: 'top right' }}
+          className="glass absolute right-0 top-11 z-40 w-[min(92vw,360px)] rounded-2xl border border-line p-2 shadow-2xl">
           <div className="flex items-center justify-between px-2 py-1.5">
             <span className="text-sm font-semibold">Próximos avisos</span>
             <button className="text-xs text-accent-2 hover:underline" onClick={() => { setOpen(false); nav('/config#avisos') }}>Configurar</button>
@@ -109,7 +119,7 @@ function Bellbox() {
               </button>
             ))}
           </div>
-        </div>
+        </motion.div>
       </>}
     </div>
   )
@@ -118,19 +128,28 @@ function Bellbox() {
 function Toasts() {
   const toasts = useStore((s) => s.toasts)
   return (
-    <div style={{ marginBottom: 'var(--host-badge, 0px)' }} className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-6">
+    <div className="toasts pointer-events-none fixed inset-x-0 z-[60] flex flex-col items-center gap-2 px-4">
+      <AnimatePresence initial={false}>
       {toasts.map((t) => (
-        <div key={t.id} className={clsx('pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border px-4 py-2.5 text-sm shadow-2xl pop-in',
+        <motion.div key={t.id} layout initial={{ opacity: 0, y: -12, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+          transition={{ type: 'spring', stiffness: 500, damping: 36 }}
+          className={clsx('glass pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border px-4 py-2.5 text-sm shadow-2xl',
           t.tone === 'error' ? 'border-danger/40 bg-[#2a1416] text-red-100' : 'border-line-strong bg-surface-3 text-ink')}>
           <span>{t.text}</span>
           {t.action && <button className="font-semibold text-accent-2 hover:underline" onClick={() => { t.action!.run(); dismissToast(t.id) }}>{t.action.label}</button>}
-        </div>
+        </motion.div>
       ))}
+      </AnimatePresence>
     </div>
   )
 }
 
 function Modals() {
+  const m = useStore((s) => s.modal)
+  return <AnimatePresence>{m && <ModalSwitch key={m.type + (('id' in m && m.id) || '') + ('preset' in m ? JSON.stringify(m.preset ?? {}) : '')} />}</AnimatePresence>
+}
+
+function ModalSwitch() {
   const m = useStore((s) => s.modal)
   if (!m) return null
   if (m.type === 'task') return <TaskModal key={m.id ?? 'new' + JSON.stringify(m.preset ?? {})} id={m.id} preset={m.preset} />
@@ -141,9 +160,34 @@ function Modals() {
   return null
 }
 
+function usePullToRefresh() {
+  const [pull, setPull] = useState(0)
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let y0: number | null = null
+    const start = (e: TouchEvent) => { y0 = window.scrollY <= 0 && !useStore.getState().modal ? e.touches[0].clientY : null }
+    const move = (e: TouchEvent) => { if (y0 !== null) setPull(Math.max(0, Math.min(110, (e.touches[0].clientY - y0) * 0.55))) }
+    const end = async () => {
+      if (y0 === null) return
+      y0 = null
+      setPull((p) => {
+        if (p >= 70) { setBusy(true); loadAll().finally(() => setTimeout(() => setBusy(false), 350)) }
+        return 0
+      })
+    }
+    window.addEventListener('touchstart', start, { passive: true })
+    window.addEventListener('touchmove', move, { passive: true })
+    window.addEventListener('touchend', end)
+    return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end) }
+  }, [])
+  return { pull, busy }
+}
+
 export function Layout() {
   const [drawer, setDrawer] = useState(false)
   const loc = useLocation()
+  const outlet = useOutlet()
+  const { pull, busy } = usePullToRefresh()
   const accent = useStore((s) => s.profile?.accent)
 
   useEffect(() => {
@@ -166,29 +210,35 @@ export function Layout() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  useEffect(() => { window.scrollTo(0, 0) }, [loc.pathname])
 
   const tab = (to: string, icon: ReactNode, label: string, end?: boolean) => (
-    <NavLink to={to} end={end} className={({ isActive }) => clsx('flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10.5px] font-medium', isActive ? 'text-ink' : 'text-faint')}>
-      {({ isActive }) => <><span className={clsx(isActive && 'text-accent-2')}>{icon}</span>{label}</>}
+    <NavLink to={to} end={end} className={({ isActive }) => clsx('relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10.5px] font-medium transition-colors', isActive ? 'text-ink' : 'text-faint')}>
+      {({ isActive }) => <>
+        {isActive && <motion.span layoutId="tab-active" className="absolute top-0 h-[3px] w-8 rounded-b-full" style={{ background: 'var(--accent)', boxShadow: '0 0 12px var(--accent)' }} transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+        <motion.span animate={{ scale: isActive ? 1.08 : 1, y: isActive ? -1 : 0 }} className={clsx(isActive && 'text-accent-2')}>{icon}</motion.span>{label}
+      </>}
     </NavLink>
   )
 
   return (
     <div className="min-h-full">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r border-line bg-surface/80 px-2 py-4 backdrop-blur lg:block no-print">
+      <aside className="glass-side fixed inset-y-0 left-0 z-30 hidden w-[248px] border-r border-line px-2 py-4 lg:block no-print">
         <Sidebar />
       </aside>
 
+      <AnimatePresence>
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/60 fade-in" onClick={() => setDrawer(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[84vw] max-w-[300px] border-r border-line bg-surface px-2 py-4 pop-in">
+          <motion.div className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+          <motion.aside initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', stiffness: 380, damping: 40 }}
+            drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={{ left: 0.6, right: 0 }} onDragEnd={(_, i) => { if (i.offset.x < -80) setDrawer(false) }}
+            className="glass-side absolute inset-y-0 left-0 w-[84vw] max-w-[300px] border-r border-line px-2 py-4" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))' }}>
             <button className="btn btn-ghost btn-icon absolute right-2 top-3" onClick={() => setDrawer(false)} aria-label="Cerrar menú"><X size={18} /></button>
             <Sidebar onNavigate={() => setDrawer(false)} />
-          </aside>
+          </motion.aside>
         </div>
       )}
+      </AnimatePresence>
 
       <div className="lg:pl-[248px]">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-line bg-bg/80 px-3 backdrop-blur-md sm:px-6 no-print" style={{ paddingTop: 'env(safe-area-inset-top)' , height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
@@ -203,20 +253,31 @@ export function Layout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1400px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12 fade-in" key={loc.pathname}>
-          <Outlet />
-        </main>
+        {(pull > 0 || busy) && (
+          <div className="pointer-events-none fixed inset-x-0 z-30 flex justify-center lg:hidden" style={{ top: `calc(3.5rem + env(safe-area-inset-top) + ${busy ? 14 : pull / 4}px)` }}>
+            <span className="glass grid h-9 w-9 place-items-center rounded-full border border-line shadow-lg" style={{ opacity: busy ? 1 : pull / 70 }}>
+              <RefreshCw size={16} className={clsx('text-accent-2', busy && 'animate-spin')} style={busy ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+            </span>
+          </div>
+        )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.main key={loc.pathname} className="mx-auto w-full max-w-[1400px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.22, ease }} onAnimationStart={() => window.scrollTo(0, 0)}>
+            {outlet}
+          </motion.main>
+        </AnimatePresence>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line bg-surface/95 backdrop-blur-md lg:hidden pb-safe no-print">
+      <nav className="glass fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-line lg:hidden pb-safe no-print">
         {tab('/', <Home size={20} />, 'Panel', true)}
         {tab('/semana', <CalendarRange size={20} />, 'Semana')}
         <div className="flex flex-1 items-center justify-center">
-          <button onClick={() => openModal({ type: 'capture' })} aria-label="Captura rápida"
-            className="-mt-6 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-xl active:scale-95 transition-transform"
+          <motion.button whileTap={{ scale: 0.9, rotate: 90 }} onClick={() => openModal({ type: 'capture' })} aria-label="Captura rápida"
+            className="-mt-6 grid h-14 w-14 place-items-center rounded-2xl text-white shadow-xl"
             style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', boxShadow: '0 10px 30px -8px var(--accent)' }}>
             <Plus size={26} />
-          </button>
+          </motion.button>
         </div>
         {tab('/editorial', <Clapperboard size={20} />, 'Contenido')}
         {tab('/tareas', <LayoutList size={20} />, 'Tareas')}
@@ -230,6 +291,7 @@ export function Layout() {
 
       <Modals />
       <Toasts />
+      <ConfettiLayer />
     </div>
   )
 }

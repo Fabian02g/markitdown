@@ -12,7 +12,7 @@ export function NoteCard({ note }: { note: Note }) {
   const done = note.checklist.filter((c) => c.done).length
   return (
     <button onClick={() => openModal({ type: 'note', id: note.id })}
-      className="card mb-3 block w-full break-inside-avoid p-4 text-left transition-all hover:-translate-y-0.5 hover:border-line-strong">
+      className="card glow-hover mb-3 block w-full break-inside-avoid p-4 text-left">
       <div className="mb-1.5 flex items-center gap-2 text-[11px] text-muted">
         {note.pinned && <Pin size={12} className="fill-current text-accent-2" />}
         <span className="font-semibold uppercase tracking-wider">{note.category || 'Nota'}</span>

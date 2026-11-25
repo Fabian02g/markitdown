@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import clsx from 'clsx'
+import { AnimatePresence, motion } from 'motion/react'
 import { Plus, Search, X, ListTodo } from 'lucide-react'
 import { PRIORITY, TASK_STATUS, TASK_STATUS_ORDER } from '../lib/constants'
 import { addDaysKey, fmt, relDay, todayKey, weekDays } from '../lib/dates'
@@ -127,7 +128,15 @@ export function TaskExplorer({ spaceId, initialDate = 'all', lockKind }: { space
               <div className={clsx('flex items-center gap-2 px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider', label === 'Vencidas' ? 'text-danger' : 'text-muted')}>
                 {label}<span className="text-faint">{list.length}</span>
               </div>
-              {list.map((t) => <TaskRow key={t.id} task={t} showSpace={!spaceId} />)}
+              <AnimatePresence initial={false}>
+                {list.map((t) => (
+                  <motion.div key={t.id} layout="position" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 40, height: 0, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] } }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 36 }}>
+                    <TaskRow task={t} showSpace={!spaceId} swipe />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           ))}
         </div>

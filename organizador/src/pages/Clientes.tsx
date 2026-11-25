@@ -23,7 +23,7 @@ function SpacesBoard({ kind }: { kind: SpaceKind }) {
           const month = pieces.filter((p) => p.space_id === s.id && p.publish_date?.slice(0, 7) === ym)
           const pub = month.filter((p) => p.status === 'publicado').length
           return (
-            <Link key={s.id} to={`/espacio/${s.id}`} className="card card-pad relative overflow-hidden transition-all hover:-translate-y-0.5 hover:border-line-strong">
+            <Link key={s.id} to={`/espacio/${s.id}`} className="card card-pad glow-hover relative overflow-hidden">
               <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: s.color }} />
               <div className="mb-3 flex items-center gap-2"><Dot color={s.color} /><b className="truncate">{s.name}</b></div>
               <div className="grid grid-cols-3 gap-2 text-center text-[11px] text-muted">

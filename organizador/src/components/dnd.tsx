@@ -5,6 +5,7 @@ import {
 } from '@dnd-kit/core'
 import { useState } from 'react'
 import clsx from 'clsx'
+import { motion } from 'motion/react'
 
 // Soltar donde está el puntero/dedo; si no hay nada debajo, usar la superposición
 const collision: CollisionDetection = (args) => { const p = pointerWithin(args); return p.length ? p : rectIntersection(args) }
@@ -29,7 +30,11 @@ export function DnD({ children, onDrop, overlay }: {
       onDragEnd={(e: DragEndEvent) => { setActive(null); if (e.over) onDrop(String(e.active.id), String(e.over.id)) }}
     >
       {children}
-      <DragOverlay dropAnimation={null}>{active && overlay ? <div className="rotate-2 opacity-90">{overlay(active)}</div> : null}</DragOverlay>
+      <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(.22,1,.36,1)' }}>{active && overlay ? (
+        <motion.div initial={{ scale: 1, rotate: 0 }} animate={{ scale: 1.05, rotate: 2 }} transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+          className="rounded-xl" style={{ boxShadow: '0 18px 40px -12px rgb(0 0 0 / .6), 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent)' }}>
+          {overlay(active)}
+        </motion.div>) : null}</DragOverlay>
     </DndContext>
   )
 }
@@ -45,5 +50,5 @@ export function Draggable({ id, children, className }: { id: string; children: R
 
 export function Droppable({ id, children, className, overClass = 'ring-2 ring-[var(--accent)] ring-inset' }: { id: string; children: ReactNode; className?: string; overClass?: string }) {
   const { setNodeRef, isOver } = useDroppable({ id })
-  return <div ref={setNodeRef} className={clsx(className, isOver && overClass)}>{children}</div>
+  return <div ref={setNodeRef} className={clsx(className, 'transition-shadow duration-150', isOver && overClass)}>{children}</div>
 }

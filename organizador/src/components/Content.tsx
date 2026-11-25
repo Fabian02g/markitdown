@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import { motion } from 'motion/react'
 import { Check, MessageSquare } from 'lucide-react'
 import { APPROVAL, PIECE_STATUS, PIECE_TYPE } from '../lib/constants'
 import { hm, relDay } from '../lib/dates'
@@ -18,7 +19,7 @@ export function PieceRow({ piece, space, showSpace = true }: { piece: Piece; spa
     <div className={clsx('group flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-surface-2', late && 'bg-danger/[.06]')}>
       <button
         onClick={() => savePiece({ id: piece.id, status: done ? 'programado' : 'publicado' })}
-        className={clsx('grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-all active:scale-90', done ? 'border-transparent bg-ok text-white' : 'border-line-strong hover:border-ok')}
+        className={clsx('grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border-2 transition-all duration-200 active:scale-75', done ? 'border-transparent bg-ok text-white shadow-[0_0_12px_rgba(52,211,153,.5)]' : 'border-line-strong hover:border-ok')}
         aria-label={done ? 'Desmarcar publicada' : 'Marcar como publicada'} title={done ? 'Publicada' : 'Marcar como publicada'}
       >{done && <Check size={13} strokeWidth={3} />}</button>
       <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => openModal({ type: 'piece', id: piece.id })}>
@@ -48,10 +49,12 @@ export function IGGrid({ pieces, onOpen, showStatus = true }: { pieces: (Pick<Pi
   if (!feed.length) return <p className="py-10 text-center text-sm text-muted">No hay publicaciones de feed este mes.</p>
   return (
     <div className="mx-auto grid max-w-[560px] grid-cols-3 gap-[3px] overflow-hidden rounded-xl">
-      {feed.map((p) => {
+      {feed.map((p, i) => {
         const st = PIECE_STATUS[p.status]
         return (
-          <button key={p.id} onClick={() => onOpen(p.id)} className="group relative aspect-[4/5] overflow-hidden bg-surface-3 text-left" title={p.title}>
+          <motion.button key={p.id} onClick={() => onOpen(p.id)} className="group relative aspect-[4/5] overflow-hidden bg-surface-3 text-left" title={p.title}
+            initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.35, delay: Math.min(i, 12) * 0.035, ease: [0.22, 1, 0.36, 1] }}>
             {p.images[0]
               ? <img src={coverUrl(p.images[0])} alt={p.title} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
               : <div className="flex h-full w-full flex-col bg-gradient-to-br from-surface-2 to-surface-3 p-2 pb-7 pt-8">
@@ -64,7 +67,7 @@ export function IGGrid({ pieces, onOpen, showStatus = true }: { pieces: (Pick<Pi
             {showStatus && <span className="absolute inset-x-0 bottom-0 h-[3px]" style={{ background: st.color }} />}
             {p.approval === 'aprobado' && <span className="absolute left-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-ok text-[11px] font-bold text-white" title="Aprobado">✓</span>}
             {p.approval === 'cambios' && <span className="absolute left-1.5 top-1.5 rounded-full bg-danger px-1.5 text-[10px] font-semibold text-white" title="Cambios pedidos">Cambios</span>}
-          </button>
+          </motion.button>
         )
       })}
     </div>

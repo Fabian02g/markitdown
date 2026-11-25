@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'motion/react'
+import { CountUp, celebrate, rise, stagger } from '../components/motion'
 import { Link, useNavigate } from 'react-router-dom'
 import clsx from 'clsx'
 import { AlertTriangle, CalendarClock, CheckCircle2, Clock, Megaphone, Pencil, Plus, Star, Target } from 'lucide-react'
@@ -14,13 +16,13 @@ import { es } from 'date-fns/locale'
 
 function Stat({ icon, label, value, tone, onClick }: { icon: React.ReactNode; label: string; value: React.ReactNode; tone?: string; onClick?: () => void }) {
   return (
-    <button onClick={onClick} className="card group flex flex-col items-start gap-2 p-3 text-left transition-colors hover:border-line-strong sm:gap-3 sm:p-5">
+    <motion.button variants={rise} whileTap={{ scale: 0.97 }} onClick={onClick} className="card glow-hover group flex flex-col items-start gap-2 p-3 text-left transition-colors hover:border-line-strong sm:gap-3 sm:p-5">
       <span className="grid h-7 w-7 place-items-center rounded-lg sm:h-9 sm:w-9 sm:rounded-xl" style={{ background: `color-mix(in srgb, ${tone ?? 'var(--accent)'} 16%, transparent)`, color: tone ?? 'var(--accent-2)' }}>{icon}</span>
       <div>
-        <div className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">{value}</div>
+        <div className="text-xl font-semibold tabular-nums tracking-tight sm:text-2xl">{typeof value === 'number' ? <CountUp value={value} /> : value}</div>
         <div className="text-[11px] leading-tight text-muted sm:text-[12px]">{label}</div>
       </div>
-    </button>
+    </motion.button>
   )
 }
 
@@ -81,6 +83,13 @@ export default function Dashboard() {
     return { pending, overdue, doneToday, pubsToday, pubsWeek, minutes, top, doneWeek }
   }, [tasks, pieces, T, wk])
 
+  // Festejo al completar todas las prioridades del día
+  const prevTop = useRef(d.top.length)
+  useEffect(() => {
+    if (prevTop.current > 0 && d.top.length === 0 && d.doneToday.length > 0) celebrate()
+    prevTop.current = d.top.length
+  }, [d.top.length, d.doneToday.length])
+
   const today = agenda.filter((i) => i.date === T)
   const upcoming = agenda.filter((i) => !i.done && i.date > T && i.date <= addDaysKey(T, 14))
   const groups: [string, AgendaItem[]][] = [
@@ -101,7 +110,10 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
             <div className="kicker mb-2">{fmt(T, "EEEE d 'de' MMMM")}</div>
-            <h1 className="text-[26px] font-semibold tracking-tight sm:text-[32px]">{greeting()}, {profile?.display_name || 'vos'}</h1>
+            <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="text-[26px] font-semibold tracking-tight sm:text-[32px]">
+              {greeting()}, <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, var(--text), var(--accent-2))' }}>{profile?.display_name || 'vos'}</span>
+            </motion.h1>
             {editPhrase ? (
               <input autoFocus className="input mt-2 max-w-xl" defaultValue={phrase}
                 onBlur={(e) => { setEditPhrase(false); if (e.target.value.trim() && e.target.value !== phrase) saveProfile({ phrase: e.target.value.trim() }) }}
@@ -120,14 +132,14 @@ export default function Dashboard() {
       </section>
 
       {/* Resumen */}
-      <section className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-6">
+      <motion.section variants={stagger} initial="hidden" animate="show" className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-6">
         <Stat icon={<CalendarClock size={18} />} label="Pendientes hoy" value={d.pending.length} onClick={() => nav('/tareas?f=today')} />
         <Stat icon={<CheckCircle2 size={18} />} label="Completadas hoy" value={d.doneToday.length} tone="var(--ok)" onClick={() => nav('/tareas?f=done')} />
         <Stat icon={<AlertTriangle size={18} />} label="Vencidas" value={d.overdue.length} tone={d.overdue.length ? 'var(--danger)' : '#71717a'} onClick={() => nav('/tareas?f=overdue')} />
         <Stat icon={<Clock size={18} />} label="Entregas (7 días)" value={deliveries.length + tasks.filter((t) => t.status !== 'done' && t.due_date && t.due_date > T && t.due_date <= addDaysKey(T, 7)).length} tone="#38bdf8" onClick={() => nav('/semana')} />
         <Stat icon={<Megaphone size={18} />} label="Publicaciones semana" value={d.pubsWeek.length} tone="#f472b6" onClick={() => nav('/editorial')} />
         <Stat icon={<Target size={18} />} label="Estimado hoy" value={fmtMinutes(d.minutes)} tone="#facc15" onClick={() => nav('/semana')} />
-      </section>
+      </motion.section>
 
       <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
         <div className="space-y-5">
@@ -141,10 +153,11 @@ export default function Dashboard() {
               ? <Empty title="Sin prioridades para hoy">Agregá una tarea y marcala como prioridad del día.</Empty>
               : <div className="grid gap-2 md:grid-cols-3">
                   {d.top.map((t, i) => (
-                    <div key={t.id} className="rounded-xl border border-line bg-surface-2 p-1">
+                    <motion.div layout key={t.id} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                      className="rounded-xl border border-line bg-surface-2 p-1">
                       <div className="px-3 pt-2 text-[11px] font-semibold text-accent-2">#{i + 1}</div>
                       <TaskRow task={t} compact />
-                    </div>
+                    </motion.div>
                   ))}
                 </div>}
           </section>
@@ -179,7 +192,7 @@ export default function Dashboard() {
                 const st = spaceStats(s.id, tasks, pieces)
                 const total = st.pending + st.done
                 return (
-                  <Link key={s.id} to={`/espacio/${s.id}`} className="card card-pad group relative overflow-hidden transition-all hover:-translate-y-0.5 hover:border-line-strong">
+                  <Link key={s.id} to={`/espacio/${s.id}`} className="card card-pad glow-hover group relative overflow-hidden">
                     <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: s.color }} />
                     <div className="mb-3 flex items-center gap-2"><Dot color={s.color} /><span className="font-semibold">{s.name}</span>
                       <span className="ml-auto text-[11px] text-muted">{s.kind === 'cliente' ? 'Freelance' : s.kind === 'fijo' ? 'Trabajo fijo' : 'Personal'}</span></div>

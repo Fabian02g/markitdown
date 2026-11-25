@@ -86,7 +86,7 @@ export default function Editorial() {
               const approved = ps.filter((p) => ['aprobado', 'programado', 'publicado'].includes(p.status)).length
               const published = ps.filter((p) => p.status === 'publicado').length
               return (
-                <Link key={c.id} to={`/espacio/${c.id}?m=${month}`} className="card card-pad relative overflow-hidden transition-all hover:-translate-y-0.5 hover:border-line-strong">
+                <Link key={c.id} to={`/espacio/${c.id}?m=${month}`} className="card card-pad glow-hover relative overflow-hidden">
                   <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: c.color }} />
                   <div className="mb-3 flex items-center gap-2"><Dot color={c.color} /><b>{c.name}</b><span className="ml-auto text-xs text-muted">Etapa: {PLAN_STAGES[stage]}</span></div>
                   <div className="mb-3 flex gap-1">{PLAN_STAGES.map((s, i) => <span key={s} title={s} className="h-1.5 flex-1 rounded-full" style={{ background: i <= stage ? c.color : 'var(--surface-3)' }} />)}</div>

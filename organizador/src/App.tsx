@@ -7,6 +7,8 @@ import { Layout } from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { MotionConfig } from 'motion/react'
+import { AppSkeleton } from './components/motion'
 
 const Agenda = lazy(() => import('./pages/Agenda'))
 const Semana = lazy(() => import('./pages/Semana'))
@@ -33,7 +35,7 @@ function Authed() {
   const ready = useStore((s) => s.ready)
   const loc = useLocation()
   if (session === null) return <Navigate to="/login" replace state={{ from: loc.pathname }} />
-  if (!ready) return <Splash />
+  if (!ready) return <AppSkeleton />
   return <Layout />
 }
 
@@ -66,6 +68,7 @@ export default function App() {
   }, [])
 
   return (
+    <MotionConfig reducedMotion="user">
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Suspense fallback={<Splash />}>
         <ErrorBoundary>
@@ -90,5 +93,6 @@ export default function App() {
         </ErrorBoundary>
       </Suspense>
     </BrowserRouter>
+    </MotionConfig>
   )
 }

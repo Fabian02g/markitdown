@@ -1,20 +1,30 @@
+import { useState } from 'react'
 import clsx from 'clsx'
 import { CalendarClock, ListChecks, Paperclip, Star, Users } from 'lucide-react'
 import { PRIORITY, TASK_STATUS } from '../lib/constants'
 import { hm, relDay } from '../lib/dates'
 import { isTaskOverdue, useSpaceMap } from '../lib/selectors'
-import { openModal, toggleTask, useStore } from '../lib/store'
+import { openModal, saveTask, toast, toggleTask, useStore } from '../lib/store'
+import { SwipeRow } from './motion'
+import { addDaysKey, todayKey } from '../lib/dates'
 import type { Task } from '../lib/types'
 import { Badge, CheckCircle, Dot } from './ui'
 
-export function TaskRow({ task, showSpace = true, compact }: { task: Task; showSpace?: boolean; compact?: boolean }) {
+export function TaskRow({ task, showSpace = true, compact, swipe }: { task: Task; showSpace?: boolean; compact?: boolean; swipe?: boolean }) {
   const spaces = useSpaceMap()
   const nAtt = useStore((s) => s.attachments.filter((a) => a.task_id === task.id).length)
   const sp = task.space_id ? spaces.get(task.space_id) : undefined
-  const done = task.status === 'done'
+  const [justDone, setJustDone] = useState(false)
+  const done = task.status === 'done' || justDone
+  // completar con un instante de pausa para que se vea el ✓ antes de que salga de la lista
+  const complete = () => {
+    if (task.status === 'done') return toggleTask(task)
+    setJustDone(true)
+    setTimeout(() => { toggleTask(task); setJustDone(false) }, 420)
+  }
   const overdue = isTaskOverdue(task)
   const subDone = task.subtasks.filter((s) => s.done).length
-  return (
+  const row = (
     <div
       role="button" tabIndex={0}
       onClick={() => openModal({ type: 'task', id: task.id })}
@@ -22,7 +32,7 @@ export function TaskRow({ task, showSpace = true, compact }: { task: Task; showS
       className={clsx('group flex cursor-pointer items-center gap-3 rounded-xl border border-transparent px-3 transition-colors hover:border-line hover:bg-surface-2',
         compact ? 'py-2' : 'py-2.5', overdue && 'bg-danger/[.06]')}
     >
-      <CheckCircle checked={done} onChange={() => toggleTask(task)} color={sp?.color} />
+      <CheckCircle checked={done} onChange={complete} color={sp?.color} />
       <div className="min-w-0 flex-1">
         <div className={clsx('flex items-center gap-1.5 truncate text-[14px] font-medium', done && 'text-faint line-through')}>
           {task.is_top && <Star size={13} className="shrink-0 fill-[var(--accent-2)] text-accent-2" />}
@@ -45,5 +55,13 @@ export function TaskRow({ task, showSpace = true, compact }: { task: Task; showS
       {!compact && task.status !== 'todo' && task.status !== 'done' && <Badge color={TASK_STATUS[task.status].color} className="hidden sm:inline-flex">{TASK_STATUS[task.status].label}</Badge>}
       <span title={`Prioridad ${PRIORITY[task.priority].label}`} className="h-6 w-1 shrink-0 rounded-full" style={{ background: PRIORITY[task.priority].color, opacity: done ? .3 : 1 }} />
     </div>
+  )
+  if (!swipe) return row
+  const tomorrow = addDaysKey(task.due_date && task.due_date > todayKey() ? task.due_date : todayKey(), 1)
+  return (
+    <SwipeRow disabled={done} onRight={complete}
+      onLeft={() => { saveTask({ id: task.id, due_date: tomorrow }); toast('Pasada para ' + (tomorrow === addDaysKey(todayKey(), 1) ? 'mañana' : tomorrow.split('-').reverse().slice(0, 2).join('/'))) }}>
+      {row}
+    </SwipeRow>
   )
 }

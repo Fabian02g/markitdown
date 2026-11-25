@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import clsx from 'clsx'
+import { AnimatePresence, motion } from 'motion/react'
 import { Check, ChevronLeft, ChevronRight, ExternalLink, MessageSquare, PencilLine, X } from 'lucide-react'
 import { supabase, coverUrl } from '../lib/supabase'
 import { IGGrid, StoriesRow } from '../components/Content'
@@ -113,7 +114,7 @@ export default function Portal() {
         </>}
       </main>
 
-      {piece && <PieceSheet token={token} piece={piece} onClose={() => setOpen(null)} onDone={() => load(month)} />}
+      <AnimatePresence>{piece && <PieceSheet key={piece.id} token={token} piece={piece} onClose={() => setOpen(null)} onDone={() => load(month)} />}</AnimatePresence>
     </div>
   )
 }
@@ -144,13 +145,20 @@ function PieceSheet({ token, piece, onClose, onDone }: { token: string; piece: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-black/70 fade-in" onClick={onClose} />
-      <div className="relative flex max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line bg-surface shadow-2xl slide-up sm:max-w-lg sm:rounded-2xl sm:pop-in">
+      <motion.div className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" onClick={onClose} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+      <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} transition={{ type: 'spring', stiffness: 380, damping: 36 }}
+        className="modal-surface relative flex max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-line shadow-2xl sm:max-w-lg sm:rounded-2xl">
         <button className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white" onClick={onClose} aria-label="Cerrar"><X size={16} /></button>
         <div className="overflow-y-auto">
           {piece.images.length > 0 && (
             <div className="relative bg-black">
-              <img src={coverUrl(piece.images[img])} alt={piece.title} className={clsx('mx-auto max-h-[60dvh] w-full object-contain', piece.type === 'historia' && 'max-h-[70dvh]')} />
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.img key={img} src={coverUrl(piece.images[img])} alt={piece.title}
+                  className={clsx('mx-auto max-h-[60dvh] w-full touch-pan-y object-contain', piece.type === 'historia' && 'max-h-[70dvh]')}
+                  initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.22 }}
+                  drag={piece.images.length > 1 ? 'x' : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.4}
+                  onDragEnd={(_, i) => { if (i.offset.x < -50 && img < piece.images.length - 1) setImg(img + 1); else if (i.offset.x > 50 && img > 0) setImg(img - 1) }} />
+              </AnimatePresence>
               {piece.images.length > 1 && <>
                 <button className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white disabled:opacity-30" disabled={img === 0} onClick={() => setImg(img - 1)} aria-label="Anterior"><ChevronLeft size={16} /></button>
                 <button className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-black/50 text-white disabled:opacity-30" disabled={img === piece.images.length - 1} onClick={() => setImg(img + 1)} aria-label="Siguiente"><ChevronRight size={16} /></button>
@@ -207,7 +215,7 @@ function PieceSheet({ token, piece, onClose, onDone }: { token: string; piece: P
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
