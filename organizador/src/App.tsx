@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { loadAll, startRealtime, stopRealtime, useStore } from './lib/store'
-import { registerSW } from './lib/push'
+import { registerSW, syncPush } from './lib/push'
 import { Layout } from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -48,7 +48,7 @@ export default function App() {
     let first = true
     supabase.auth.getSession().then(({ data }) => {
       useStore.setState({ session: data.session, ready: !data.session })
-      if (data.session) { loadAll(); startRealtime() }
+      if (data.session) { loadAll(); startRealtime(); syncPush() }
     })
     const { data: sub } = supabase.auth.onAuthStateChange((ev, s) => {
       if (first) { first = false; if (ev === 'INITIAL_SESSION') return }
@@ -58,7 +58,7 @@ export default function App() {
         stopRealtime()
         useStore.setState({ ready: true, profile: null, spaces: [], tasks: [], pieces: [], notes: [], plans: [], comments: [], attachments: [], reminders: [] })
       } else if (s && (!prev || prev.user.id !== s.user.id)) {
-        useStore.setState({ ready: false }); loadAll(); startRealtime()
+        useStore.setState({ ready: false }); loadAll(); startRealtime(); syncPush()
       }
     })
     // abrir la URL de una notificación tocada

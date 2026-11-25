@@ -7,7 +7,7 @@ import { ColorPicker, Dot, Field, PageHead, TagInput } from '../components/ui'
 import { SPACE_KIND } from '../lib/constants'
 import { exportJSON, exportPiecesCSV, exportTasksCSV } from '../lib/export'
 import { importOldPanel } from '../lib/importer'
-import { currentSubscription, disablePush, enablePush, isIOS, isStandalone, pushSupported } from '../lib/push'
+import { currentSubscription, disablePush, enablePush, isIOS, isStandalone, pushSupported, syncPush } from '../lib/push'
 import { saveProfile, saveSpace, toast, useStore } from '../lib/store'
 import { supabase } from '../lib/supabase'
 import type { Space } from '../lib/types'
@@ -41,7 +41,7 @@ export default function Config() {
     setMyEndpoint(sub?.endpoint ?? '')
     setPushOn(Boolean(sub && (data ?? []).some((d) => d.endpoint === sub.endpoint)))
   }
-  useEffect(() => { loadDevices() }, [])
+  useEffect(() => { syncPush().finally(loadDevices) }, [])
   useEffect(() => { if (location.hash) document.querySelector(location.hash)?.scrollIntoView() }, [])
 
   if (!profile) return null
@@ -88,13 +88,19 @@ export default function Config() {
                 <Smartphone size={18} className="text-muted" />
                 <div className="min-w-0 flex-1 text-sm">
                   <div className="font-medium">Este dispositivo</div>
-                  <div className="text-xs text-muted">{pushOn ? 'Recibe notificaciones' : pushSupported() ? 'Notificaciones desactivadas' : isIOS() && !isStandalone() ? 'En iPhone: instalá la app en la pantalla de inicio primero' : 'Este navegador no admite notificaciones'}</div>
+                  <div className="text-xs text-muted">{pushOn ? `Recibe notificaciones (${isStandalone() ? 'app instalada' : 'navegador'})` : pushSupported() ? 'Notificaciones desactivadas' : isIOS() && !isStandalone() ? 'En iPhone: instalá la app en la pantalla de inicio primero' : 'Este navegador no admite notificaciones'}</div>
                 </div>
                 {pushOn
                   ? <button className="btn btn-sm" onClick={async () => { await disablePush(); await loadDevices(); toast('Notificaciones desactivadas en este dispositivo') }}><BellOff size={14} />Desactivar</button>
                   : <button className="btn btn-primary btn-sm" onClick={async () => { const r = await enablePush(); toast(r.msg, { tone: r.ok ? 'ok' : 'error' }); loadDevices() }}><Bell size={14} />Activar</button>}
               </div>
-              {pushOn && <button className="btn btn-sm mt-3 w-full" onClick={async () => { const { error } = await supabase.rpc('send_test_push'); toast(error ? 'Error: ' + error.message : 'Enviada. Te llega en menos de un minuto.', { tone: error ? 'error' : 'ok' }) }}>Enviar notificación de prueba</button>}
+              {pushOn && <button className="btn btn-sm mt-3 w-full" onClick={async () => {
+                await syncPush(); await loadDevices()
+                const { data, error } = await supabase.rpc('send_test_push')
+                if (error) return toast('Error: ' + error.message, { tone: 'error' })
+                const n = Number(data) || 0
+                toast(n ? `Enviada a ${n} dispositivo${n > 1 ? 's' : ''}. Llega en menos de un minuto.` : 'No hay dispositivos registrados: tocá "Activar".', { tone: n ? 'ok' : 'error' })
+              }}>Enviar notificación de prueba</button>}
               {devices.length > 0 && (
                 <div className="mt-3 space-y-1 border-t border-line pt-3">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted">Dispositivos con avisos</div>
