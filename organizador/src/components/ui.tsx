@@ -31,7 +31,7 @@ export function Modal({ open = true, onClose, title, children, footer, wide }: {
             <button className="btn btn-ghost btn-icon -mr-2" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
           </div>
         )}
-        <div className="flex-1 overflow-y-auto px-5 pb-5">{children}</div>
+        <div className={clsx("flex-1 overflow-y-auto px-5 pb-5", !footer && "pb-safe")}>{children}</div>
         {footer && <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-3 pb-safe">{footer}</div>}
       </div>
     </div>

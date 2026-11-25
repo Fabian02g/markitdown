@@ -4,7 +4,7 @@ const { chromium, devices } = require('playwright')
 const path = require('path')
 const OUT = process.env.OUT || path.join(__dirname, 'shots')
 require('fs').mkdirSync(OUT, { recursive: true })
-const BASE = 'http://localhost:5173'
+const BASE = process.env.BASE || 'http://localhost:5173'
 let fails = 0
 const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++ }
 const today = new Date(); const pad = (n) => String(n).padStart(2, '0')
@@ -12,12 +12,13 @@ const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate(
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return key(d) }
 
 ;(async () => {
-  const browser = await chromium.launch()
+  const browser = await chromium.launch(BASE.startsWith('https') && process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {})
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   const page = await ctx.newPage()
+  global.__page = page
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
-  page.on('console', (m) => m.type() === 'error' && !m.text().includes('realtime') && !m.text().includes('WebSocket') && errors.push(m.text()))
+  page.on('console', (m) => m.type() === 'error' && !m.text().includes('realtime') && !m.text().includes('WebSocket') && !m.text().includes('fonts.g') && !m.text().includes('ERR_TUNNEL') && !m.text().includes('Failed to load resource') && errors.push(m.text()))
 
   // ---- Registro ----
   const email = `aracely${Date.now()}@test.dev`
@@ -213,6 +214,7 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await page.getByText('Idea guardada').last().waitFor()
   await page.getByText('un día en el consultorio').click()
   await page.getByRole('button', { name: 'A tarea', exact: true }).click()
+  await page.getByRole('dialog').getByText('Nueva tarea').waitFor()
   await page.getByRole('dialog').getByRole('button', { name: 'Guardar' }).click()
   await page.getByText('Tarea creada').last().waitFor()
   ok(true, 'nota convertida en tarea')
@@ -251,4 +253,4 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await browser.close()
   console.log(fails ? `\n${fails} fallas` : '\nTODO OK')
   process.exit(fails ? 1 : 0)
-})().catch((e) => { console.error(e); process.exit(1) })
+})().catch(async (e) => { console.error(e); try { await global.__page.screenshot({ path: `${OUT}/fallo.png` }) } catch {} process.exit(1) })

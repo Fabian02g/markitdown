@@ -14,7 +14,15 @@ App web (PWA) para organizar trabajo fijo, clientes freelance, vida personal, ca
 - **Recordatorios reales**: se calculan en la base al guardar y los envía una Edge Function cada minuto (pg_cron), aunque la app esté cerrada. Resumen diario configurable.
 - PWA instalable, responsive, modo oscuro/claro, sincronización en vivo entre dispositivos.
 
-## Puesta en marcha (una sola vez)
+## Instalación actual
+- App: https://mi-panel-organizador.netlify.app (Netlify, sitio `mi-panel-organizador`)
+- Supabase: proyecto `mi-panel` (`shjzeppllhivrcfeabmg`, São Paulo), organización "Aracely"
+- Avisos: Edge Function `send-reminders` + pg_cron cada minuto (ya configurado)
+- Los valores públicos de compilación están en `.env.production`
+
+Volver a publicar: `npm run build` y subir `dist/` a Netlify (o conectar el repo en Netlify con build `npm run build` y carpeta `dist`).
+
+## Puesta en marcha desde cero
 
 ### 1. Supabase
 1. Crear un proyecto en https://supabase.com (plan gratis).

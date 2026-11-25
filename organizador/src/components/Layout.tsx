@@ -118,7 +118,7 @@ function Bellbox() {
 function Toasts() {
   const toasts = useStore((s) => s.toasts)
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-6">
+    <div style={{ marginBottom: 'var(--host-badge, 0px)' }} className="pointer-events-none fixed inset-x-0 bottom-24 z-[60] flex flex-col items-center gap-2 px-4 lg:bottom-6">
       {toasts.map((t) => (
         <div key={t.id} className={clsx('pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border px-4 py-2.5 text-sm shadow-2xl pop-in',
           t.tone === 'error' ? 'border-danger/40 bg-[#2a1416] text-red-100' : 'border-line-strong bg-surface-3 text-ink')}>
@@ -223,7 +223,7 @@ export function Layout() {
       </nav>
 
       <button onClick={() => openModal({ type: 'capture' })} aria-label="Captura rápida"
-        className="fixed bottom-6 right-6 z-30 hidden h-14 w-14 place-items-center rounded-2xl text-white shadow-2xl transition-transform hover:scale-105 active:scale-95 lg:grid no-print"
+        className="fab-bottom fixed right-6 z-30 hidden h-14 w-14 place-items-center rounded-2xl text-white shadow-2xl transition-transform hover:scale-105 active:scale-95 lg:grid no-print"
         style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', boxShadow: '0 12px 34px -8px var(--accent)' }}>
         <Plus size={26} />
       </button>

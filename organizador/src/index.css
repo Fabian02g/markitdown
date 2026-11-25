@@ -104,7 +104,8 @@ body {
 @keyframes slideUp { from { transform: translateY(100%) } to { transform: none } }
 
 .accent-glow { background: radial-gradient(1200px 300px at 0% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%), var(--surface); }
-.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
+.pb-safe { padding-bottom: max(env(safe-area-inset-bottom), var(--host-badge, 0px)); }
+.fab-bottom { bottom: calc(1.5rem + var(--host-badge, 0px)); }
 .no-scrollbar { scrollbar-width: none; } .no-scrollbar::-webkit-scrollbar { display: none; }
 
 @media print {

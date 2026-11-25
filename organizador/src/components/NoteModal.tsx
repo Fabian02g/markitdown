@@ -23,7 +23,7 @@ export function NoteModal({ id, preset }: { id?: string; preset?: Partial<Note> 
   }
   const toTask = async () => {
     const r = await save()
-    openModal({ type: 'task', preset: { title: d.title || (d.body ?? '').split('\n')[0].slice(0, 120), description: d.body ?? '', space_id: d.space_id ?? null,
+    openModal({ type: 'task', preset: { title: d.title || (d.body ?? '').split('\n')[0].slice(0, 120), description: d.body ?? '', ...(d.space_id ? { space_id: d.space_id } : {}),
       subtasks: list.map((c) => ({ id: c.id, title: c.text, done: c.done })) } })
     if (r) toast('Completá la tarea y guardala. La nota se mantiene.')
   }
