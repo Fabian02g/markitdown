@@ -29,6 +29,11 @@ let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!
   await tap(p.getByRole('button', { name: 'Abrir menú' })); await p.waitForTimeout(450)
   await tap(p.locator('aside').getByText('Mi agenda').last()); await p.waitForTimeout(600)
   ok(p.url().endsWith('/agenda') && !(await menuOpen()), 'tocar una opción del menú navega y lo cierra')
+  // volver atrás (gesto de Safari): la pantalla aparece al instante, sin quedar en blanco
+  await p.goBack(); await p.waitForTimeout(60)
+  ok(await p.evaluate(() => Number(getComputedStyle(document.querySelector('main')).opacity)) > 0.95, 'volver atrás muestra la pantalla al instante')
+  ok(!(await menuOpen()), 'volver atrás no muestra el menú abierto')
+  await p.goForward(); await p.waitForTimeout(400)
   await tap(p.getByRole('button', { name: 'Captura rápida' }).first()); await p.waitForTimeout(450)
   ok(await p.getByRole('dialog').isVisible(), '+ abre la captura rápida')
   await tap(p.getByRole('dialog').getByRole('button', { name: 'Cerrar' })); await p.waitForTimeout(450)

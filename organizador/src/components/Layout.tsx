@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate, useNavigationType, useOutlet } from 'react-router-dom'
 import { AnimatePresence, motion, useIsPresent } from 'motion/react'
 import { ConfettiLayer, ease } from './motion'
 import { RefreshCw } from 'lucide-react'
@@ -20,8 +20,17 @@ import { QuickCapture } from './QuickCapture'
 import { SearchPalette } from './SearchPalette'
 
 function NavItem({ to, icon, children, end, onClick }: { to: string; icon: ReactNode; children: ReactNode; end?: boolean; onClick?: () => void }) {
+  const nav = useNavigate()
   return (
-    <NavLink to={to} end={end} onClick={onClick}
+    <NavLink to={to} end={end}
+      onClick={(e) => {
+        if (!onClick) return
+        // en el menú del celular: cerrar primero y cambiar de pantalla después,
+        // así la "foto" que guarda Safari para volver atrás no incluye el menú abierto
+        e.preventDefault()
+        onClick()
+        setTimeout(() => nav(to), 200)
+      }}
       className={({ isActive }) => clsx('group relative flex h-9 items-center gap-2.5 rounded-xl px-3 text-[13.5px] font-medium transition-colors',
         isActive ? 'text-ink' : 'text-muted hover:bg-surface-2 hover:text-ink')}>
       {({ isActive }) => <>
@@ -214,6 +223,7 @@ export function Layout() {
   const swipe = useRef<{ x: number; y: number } | null>(null)
   const loc = useLocation()
   const outlet = useOutlet()
+  const navType = useNavigationType()
   useEffect(() => { window.scrollTo(0, 0); setDrawer(false) }, [loc.pathname])
   const { pull, busy } = usePullToRefresh()
   const accent = useStore((s) => s.profile?.accent)
@@ -294,7 +304,7 @@ export function Layout() {
           </div>
         )}
         <motion.main key={loc.pathname} className="mx-auto w-full max-w-[1400px] px-4 pb-28 pt-5 sm:px-6 lg:pb-12"
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease }}>
+          initial={navType === 'POP' ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease }}>
           {outlet}
         </motion.main>
       </div>
