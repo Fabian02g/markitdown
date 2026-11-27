@@ -4,7 +4,7 @@ const BASE = process.env.BASE || 'http://localhost:5173'
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++ }
 const pad = (n) => String(n).padStart(2, '0'); const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 ;(async () => {
-  const b = await chromium.launch()
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {})
   // Hora de Paraguay (UTC-3), 22:30: completar a esa hora tiene que contar para "hoy"
   const ctx = await b.newContext({ viewport: { width: 1280, height: 860 }, timezoneId: 'America/Asuncion' })
   const p = await ctx.newPage(); const errors = []
@@ -78,8 +78,8 @@ const pad = (n) => String(n).padStart(2, '0'); const day = (n) => { const d = ne
   ok(await m.getByRole('dialog').getByText('Agregar en este día').isVisible(), 'y ofrece agregar en ese día')
   await m.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).click()
   // 6) tarjeta de primeros pasos en el celular
-  await m.goto(BASE + '/'); await m.waitForTimeout(600)
-  ok(await m.getByText('Instalá Mi Panel en tu celular').isVisible(), 'celular sin instalar: muestra cómo instalar la app')
+  await m.goto(BASE + '/')
+  ok(await m.getByText('Instalá Mi Panel en tu celular').waitFor({ timeout: 8000 }).then(() => true, () => false), 'celular sin instalar: muestra cómo instalar la app')
   await m.getByRole('button', { name: 'Ocultar' }).click(); await m.reload(); await m.getByText(/, Aracely/).waitFor()
   ok(!(await m.getByText('Instalá Mi Panel en tu celular').isVisible()), 'se puede ocultar y no vuelve a aparecer')
 

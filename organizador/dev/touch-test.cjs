@@ -3,7 +3,7 @@ const { chromium, devices } = require('playwright')
 const BASE = process.env.BASE || 'http://localhost:5173'
 let fails = 0; const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++ }
 ;(async () => {
-  const b = await chromium.launch(BASE.startsWith('https') && process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {})
+  const b = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {})
   const c = await b.newContext({ ...devices['iPhone 13'] }); const p = await c.newPage(); const cdp = await c.newCDPSession(p); global.__p = p
   const tap = async (loc) => { const bx = await loc.boundingBox(); const x = bx.x + bx.width / 2, y = bx.y + bx.height / 2
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] })

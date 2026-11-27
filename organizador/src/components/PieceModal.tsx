@@ -27,7 +27,7 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
   const [d, setD] = useState<Draft>(() => existing ? { ...existing } : {
     space_id: clients[0]?.id ?? '', title: '', type: 'post', status: 'idea', approval: 'sin_enviar', concept: '', copy: '', pillar: '',
     channels: ['Instagram'], production_date: null, delivery_date: null, publish_date: null, publish_time: null, design_url: '', video_url: '',
-    images: [], notes: '', is_extra: false, is_paid: false, share_with_client: true, published_at: null, published_where: '', reminder_rules: null,
+    images: [], notes: '', is_extra: false, extra_billed: false, extra_amount: null, is_paid: false, share_with_client: true, published_at: null, published_where: '', reminder_rules: null,
     ...preset,
   })
   const [uploading, setUploading] = useState(false)
@@ -225,6 +225,13 @@ export function PieceModal({ id, preset }: { id?: string; preset?: Partial<Piece
           <div className="space-y-2 text-sm">
             <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={d.share_with_client} onChange={(e) => up('share_with_client', e.target.checked)} />Mostrar al cliente</label>
             <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={d.is_extra} onChange={(e) => up('is_extra', e.target.checked)} />Extra (fuera del acuerdo)</label>
+            {d.is_extra && (
+              <div className="ml-6 space-y-2 rounded-xl border border-warn/30 bg-warn/[.07] p-2.5 fade-in">
+                <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--ok)]" checked={d.extra_billed} onChange={(e) => up('extra_billed', e.target.checked)} />Ya lo cobré</label>
+                <input type="number" min={0} inputMode="numeric" className="input h-9 text-[13px]" placeholder="Monto a cobrar (opcional)"
+                  value={d.extra_amount ?? ''} onChange={(e) => up('extra_amount', e.target.value === '' ? null : Math.max(0, Number(e.target.value)))} />
+              </div>
+            )}
             <label className="flex items-center gap-2"><input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={d.is_paid} onChange={(e) => up('is_paid', e.target.checked)} />Lleva pauta</label>
           </div>
           {d.publish_date && d.status !== 'publicado' && (

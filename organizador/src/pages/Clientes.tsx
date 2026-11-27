@@ -31,6 +31,8 @@ function SpacesBoard({ kind }: { kind: SpaceKind }) {
                 <div><div className="text-lg font-semibold text-ok">{st.done}</div>hechas</div>
                 <div><div className={st.overdue ? 'text-lg font-semibold text-danger' : 'text-lg font-semibold text-faint'}>{st.overdue}</div>vencidas</div>
               </div>
+              {kind === 'cliente' && (() => { const n = pieces.filter((p) => p.space_id === s.id && p.is_extra && !p.extra_billed).length
+                return n > 0 ? <p className="mt-3 rounded-lg bg-warn/10 px-2 py-1 text-[11.5px] font-medium text-warn">{n} extra{n > 1 ? 's' : ''} por cobrar</p> : null })()}
               {kind === 'cliente' && <div className="mt-3"><div className="mb-1 flex justify-between text-[11px] text-muted"><span>Este mes</span><span>{pub}/{month.length} publicadas</span></div><Progress value={month.length ? (pub / month.length) * 100 : 0} color={s.color} /></div>}
             </Link>
           )

@@ -10,9 +10,11 @@ const ok = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) fails++ }
 const today = new Date(); const pad = (n) => String(n).padStart(2, '0')
 const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return key(d) }
+// días dentro del mes actual (el link del cliente muestra el mes en curso)
+const soon = (n) => { const d = new Date(); const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(d.getDate() + n, last)); return key(d) }
 
 ;(async () => {
-  const browser = await chromium.launch(BASE.startsWith('https') && process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {})
+  const browser = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY, bypass: 'localhost,127.0.0.1' } } : {})
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   const page = await ctx.newPage()
   global.__page = page
@@ -32,13 +34,13 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await page.waitForURL(BASE + '/')
   await page.getByText(/, Aracely/).waitFor()
   ok(true, 'registro y saludo personalizado')
-  for (const n of ['Trabajo fijo', 'Odontóloga', 'Psicóloga', 'Courier', 'Personal']) ok(await page.locator('aside').getByText(n, { exact: true }).first().isVisible(), `sidebar: ${n}`)
+  for (const n of ['Garabato', 'Maga Odonto', 'Psico Marti', 'One Box Courier', 'Personal']) ok(await page.locator('aside').getByText(n, { exact: true }).first().isVisible(), `sidebar: ${n}`)
 
   // ---- Captura rápida (tarea en segundos) ----
   const t0 = Date.now()
   await page.keyboard.press('c')
   await page.getByPlaceholder('Ej.: Editar reel de la odontóloga').fill('Editar reel limpieza dental')
-  await page.getByRole('dialog').getByRole('button', { name: 'Odontóloga' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Maga Odonto' }).click()
   await page.getByPlaceholder('Ej.: Editar reel de la odontóloga').press('Enter')
   await page.getByText('Tarea creada').last().waitFor()
   ok(Date.now() - t0 < 4000, `captura rápida de tarea en ${Date.now() - t0} ms`)
@@ -47,7 +49,7 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await page.getByRole('button', { name: 'Nueva tarea' }).first().click()
   const dlg = page.getByRole('dialog')
   await dlg.getByPlaceholder('¿Qué tenés que hacer?').fill('Reunión de planificación diciembre')
-  await dlg.getByRole('button', { name: 'Psicóloga' }).click()
+  await dlg.getByRole('button', { name: 'Psico Marti' }).click()
   await dlg.getByRole('button', { name: 'Mañana' }).click()
   await dlg.locator('input[type=time]').fill('10:00')
   await dlg.locator('select').first().selectOption('urgent')
@@ -65,7 +67,7 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   // tarea vencida (ayer) para trabajo fijo
   await page.getByRole('button', { name: 'Nueva tarea' }).first().click()
   await dlg.getByPlaceholder('¿Qué tenés que hacer?').fill('Informe mensual atrasado')
-  await dlg.getByRole('button', { name: 'Trabajo fijo' }).click()
+  await dlg.getByRole('button', { name: 'Garabato' }).click()
   await dlg.locator('input[type=date]').fill(plus(-1))
   await dlg.locator('input[type=number]').fill('90')
   await dlg.getByRole('button', { name: 'Guardar' }).click()
@@ -111,9 +113,9 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   await page.goto(BASE + '/editorial')
   await page.getByRole('button', { name: 'Nueva pieza' }).click()
   await dlg.getByPlaceholder('Título o tema').fill('Mitos de la ansiedad')
-  await dlg.getByRole('button', { name: 'Psicóloga' }).click()
+  await dlg.getByRole('button', { name: 'Psico Marti' }).click()
   await dlg.getByRole('button', { name: 'Carrusel' }).click()
-  await dlg.locator('input[type=date]').first().fill(plus(3))
+  await dlg.locator('input[type=date]').first().fill(soon(3))
   await dlg.locator('input[type=time]').first().fill('19:00')
   await dlg.getByPlaceholder('De qué trata').fill('5 mitos comunes sobre la ansiedad y qué dice la evidencia.')
   await dlg.locator('textarea').nth(1).fill('¿Sabías que la ansiedad no siempre es mala? 🧠')
@@ -125,16 +127,16 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   // segunda pieza reel
   await page.getByRole('button', { name: 'Nueva pieza' }).click()
   await dlg.getByPlaceholder('Título o tema').fill('Reel respiración 4-7-8')
-  await dlg.getByRole('button', { name: 'Psicóloga' }).click()
+  await dlg.getByRole('button', { name: 'Psico Marti' }).click()
   await dlg.getByRole('button', { name: 'Reel' }).click()
-  await dlg.locator('input[type=date]').first().fill(plus(5))
+  await dlg.locator('input[type=date]').first().fill(soon(5))
   await dlg.getByRole('button', { name: 'Guardar' }).click()
   await page.getByText('Pieza creada').last().waitFor()
   await page.getByRole('button', { name: 'Lista' }).click()
   await page.screenshot({ path: `${OUT}/04-editorial-lista.png` })
 
   // ---- Plan del cliente: grilla + link ----
-  await page.locator('aside').getByText('Psicóloga', { exact: true }).click()
+  await page.locator('aside').getByText('Psico Marti', { exact: true }).click()
   await page.getByRole('button', { name: 'Grilla' }).click()
   await page.waitForTimeout(500)
   await page.screenshot({ path: `${OUT}/05-plan-grilla.png` })
@@ -152,7 +154,7 @@ const plus = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return k
   const cctx = await browser.newContext({ ...devices['iPhone 13'] })
   const cp = await cctx.newPage()
   await cp.goto(href)
-  await cp.getByText('Psicóloga').first().waitFor()
+  await cp.getByText('Psico Marti').first().waitFor()
   await cp.waitForTimeout(500)
   await cp.screenshot({ path: `${OUT}/07-portal-cliente.png` })
   ok(await cp.locator('button[title="Mitos de la ansiedad"]').count() === 1, 'portal muestra la grilla')

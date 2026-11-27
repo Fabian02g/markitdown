@@ -19,7 +19,7 @@ const { data: prof } = await a.from('profiles').select('*').single();
 ok(prof?.display_name === 'Aracely', 'perfil creado con nombre');
 const { data: spaces } = await a.from('spaces').select('*').order('sort');
 ok(spaces?.length === 5, 'espacios iniciales: ' + spaces?.map(s => s.name).join(', '));
-const psico = spaces.find(s => s.name === 'Psicóloga');
+const psico = spaces.find(s => s.name === 'Psico Marti');
 
 // RLS: B no ve espacios de A
 const { data: bsp } = await b.from('spaces').select('id').eq('id', psico.id);
@@ -50,7 +50,7 @@ const month = d.slice(0, 7);
 const bad = await anon.rpc('portal_get', { p_token: 'x'.repeat(36), p_month: month });
 ok(bad.data === null, 'portal con token inválido no devuelve nada');
 const pg = await anon.rpc('portal_get', { p_token: psico.portal_token, p_month: month });
-ok(pg.data?.pieces?.length === 1 && pg.data.client.name === 'Psicóloga', 'portal devuelve piezas del mes');
+ok(pg.data?.pieces?.length === 1 && pg.data.client.name === 'Psico Marti', 'portal devuelve piezas del mes');
 const fb = await anon.rpc('portal_feedback', { p_token: psico.portal_token, p_piece: pc.id, p_kind: 'cambios', p_body: 'Cambiar la palabra ansiedad', p_name: 'Dra. X' });
 ok(!fb.error, 'cliente pide cambios ' + (fb.error?.message ?? ''));
 const { data: pc2 } = await a.from('pieces').select('status,approval').eq('id', pc.id).single();

@@ -15,22 +15,22 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
   const { data: sp } = await sb.from('spaces').select('*').order('sort')
   const S = Object.fromEntries(sp.map((s) => [s.name, s.id]))
   await sb.from('tasks').insert([
-    { title: 'Editar reel limpieza dental', space_id: S['Odontóloga'], due_date: day(0), due_time: '11:00', priority: 'high', is_top: true, estimate_min: 90, category: 'Edición de video' },
-    { title: 'Enviar PDP de diciembre', space_id: S['Psicóloga'], due_date: day(0), due_time: '16:00', priority: 'urgent', is_top: true, estimate_min: 60 },
-    { title: 'Reunión de equipo', space_id: S['Trabajo fijo'], due_date: day(0), due_time: '09:30', is_meeting: true, estimate_min: 45 },
-    { title: 'Flyer promo envíos gratis', space_id: S['Courier'], due_date: day(1), priority: 'medium', estimate_min: 120 },
+    { title: 'Editar reel limpieza dental', space_id: S['Maga Odonto'], due_date: day(0), due_time: '11:00', priority: 'high', is_top: true, estimate_min: 90, category: 'Edición de video' },
+    { title: 'Enviar PDP de diciembre', space_id: S['Psico Marti'], due_date: day(0), due_time: '16:00', priority: 'urgent', is_top: true, estimate_min: 60 },
+    { title: 'Reunión de equipo', space_id: S['Garabato'], due_date: day(0), due_time: '09:30', is_meeting: true, estimate_min: 45 },
+    { title: 'Flyer promo envíos gratis', space_id: S['One Box Courier'], due_date: day(1), priority: 'medium', estimate_min: 120 },
     { title: 'Turno dentista', space_id: S['Personal'], due_date: day(2), due_time: '18:00' },
     { title: 'Cumple de Romi 🎂', space_id: S['Personal'], due_date: day(4) },
-    { title: 'Informe mensual de redes', space_id: S['Trabajo fijo'], due_date: day(-1), priority: 'high', estimate_min: 120 },
+    { title: 'Informe mensual de redes', space_id: S['Garabato'], due_date: day(-1), priority: 'high', estimate_min: 120 },
   ], { defaultToNull: false })
   const img = fs.readFileSync(path.join(__dirname, '..', 'public', 'icon-512.png'))
   const uid = (await sb.auth.getUser()).data.user.id
   const up = async () => { const p = `${uid}/${Math.random().toString(36).slice(2)}.png`; await sb.storage.from('covers').upload(p, img, { contentType: 'image/png' }); return p }
   await sb.from('pieces').insert([
-    { title: 'Mitos de la ansiedad', type: 'carrusel', space_id: S['Psicóloga'], publish_date: day(0), publish_time: '19:00', status: 'aprobado', approval: 'aprobado', images: [await up(), await up()], concept: '5 mitos comunes y qué dice la evidencia.' },
-    { title: 'Reel respiración 4-7-8', type: 'reel', space_id: S['Psicóloga'], publish_date: day(2), status: 'esperando', approval: 'pendiente' },
-    { title: 'Tips de cepillado', type: 'post', space_id: S['Odontóloga'], publish_date: day(1), publish_time: '12:00', status: 'diseno' },
-    { title: 'Historia: horarios de atención', type: 'historia', space_id: S['Courier'], publish_date: day(3), status: 'idea' },
+    { title: 'Mitos de la ansiedad', type: 'carrusel', space_id: S['Psico Marti'], publish_date: day(0), publish_time: '19:00', status: 'aprobado', approval: 'aprobado', images: [await up(), await up()], concept: '5 mitos comunes y qué dice la evidencia.' },
+    { title: 'Reel respiración 4-7-8', type: 'reel', space_id: S['Psico Marti'], publish_date: day(2), status: 'esperando', approval: 'pendiente' },
+    { title: 'Tips de cepillado', type: 'post', space_id: S['Maga Odonto'], publish_date: day(1), publish_time: '12:00', status: 'diseno' },
+    { title: 'Historia: horarios de atención', type: 'historia', space_id: S['One Box Courier'], publish_date: day(3), status: 'idea' },
   ], { defaultToNull: false })
   const browser = await chromium.launch()
 
@@ -53,7 +53,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
   await p.locator('aside').getByText('Calendario editorial').click(); await wait(1200)
   await p.getByRole('button', { name: 'Mes siguiente' }).click(); await wait(700)
   await p.getByRole('button', { name: 'Mes anterior' }).click(); await wait(900)
-  await p.locator('aside').getByText('Psicóloga', { exact: true }).click(); await wait(900)
+  await p.locator('aside').getByText('Psico Marti', { exact: true }).click(); await wait(900)
   await p.getByRole('button', { name: 'Grilla' }).click(); await wait(1500)
   await p.keyboard.press('c'); await wait(900); await p.keyboard.press('Escape'); await wait(800)
   await ctx.close()
@@ -78,7 +78,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms))
   await m.getByPlaceholder('Ej.: Editar reel de la odontóloga').fill('Grabar historias del consultorio'); await wait(500)
   await m.getByRole('dialog').getByRole('button', { name: 'Crear' }).click(); await wait(1400)
   // link del cliente
-  const tok = (await sb.from('spaces').select('portal_token').eq('id', S['Psicóloga']).single()).data.portal_token
+  const tok = (await sb.from('spaces').select('portal_token').eq('id', S['Psico Marti']).single()).data.portal_token
   await m.goto(BASE + '/c/' + tok); await wait(1500)
   await m.locator('button[title="Mitos de la ansiedad"]').click(); await wait(1300)
   await m.getByRole('button', { name: 'Cerrar' }).click(); await wait(900)
